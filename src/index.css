@@ -1,0 +1,238 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Add padding bottom for mobile bottom navigation */
+@media screen and (max-width: 768px) {
+  body {
+    padding-bottom: 80px;
+  }
+}
+
+/* Mobile Responsive Styles */
+@media screen and (max-width: 768px) {
+  /* Prevent horizontal overflow */
+  body {
+    overflow-x: hidden;
+  }
+
+  /* Container adjustments */
+  .container {
+    width: 100%;
+    padding: 10px;
+    overflow-x: hidden;
+  }
+
+  /* Navigation responsive */
+  .navigation-container {
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  .navigation-tabs {
+    flex-direction: column;
+    width: 100%;
+    gap: 0.5rem;
+  }
+
+  .navigation-tab {
+    width: 100%;
+    justify-content: center;
+    padding: 0.75rem;
+    font-size: 0.875rem;
+  }
+
+  /* Header adjustments */
+  .page-header {
+    flex-direction: column;
+    gap: 1rem;
+    text-align: center;
+  }
+
+  .page-title {
+    font-size: 1.5rem !important;
+  }
+
+  .header-actions {
+    flex-direction: column;
+    width: 100%;
+    gap: 0.5rem;
+  }
+
+  /* Button responsive */
+  .mobile-full-button {
+    width: 100% !important;
+    justify-content: center;
+  }
+
+  /* Form responsive */
+  .form-grid {
+    grid-template-columns: 1fr !important;
+    gap: 1rem;
+  }
+
+  .form-actions {
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  /* Table responsive */
+  .table-container {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .table-container table {
+    min-width: 800px;
+  }
+
+  /* Card responsive */
+  .stats-grid {
+    grid-template-columns: 1fr !important;
+    gap: 1rem;
+  }
+
+  .stats-card {
+    padding: 1rem;
+  }
+
+  /* Modal responsive */
+  .modal-container {
+    margin: 1rem;
+    max-width: calc(100vw - 2rem);
+    max-height: calc(100vh - 2rem);
+  }
+
+  /* Input responsive */
+  input, textarea, select {
+    width: 100%;
+    box-sizing: border-box;
+    font-size: 16px; /* Prevent zoom on iOS */
+  }
+
+  /* Text responsive */
+  h1 {
+    font-size: 1.75rem !important;
+  }
+
+  h2 {
+    font-size: 1.5rem !important;
+  }
+
+  h3 {
+    font-size: 1.25rem !important;
+  }
+
+  /* Spacing adjustments */
+  .mobile-padding {
+    padding: 1rem !important;
+  }
+
+  .mobile-margin {
+    margin: 0.5rem !important;
+  }
+
+  /* Hide desktop-only elements */
+  .desktop-only {
+    display: none !important;
+  }
+
+  /* Show mobile-only elements */
+  .mobile-only {
+    display: block !important;
+  }
+
+  /* Attendance table specific */
+  .attendance-actions {
+    flex-direction: column;
+    gap: 0.25rem;
+  }
+
+  .attendance-actions button {
+    padding: 0.5rem;
+    font-size: 0.75rem;
+  }
+
+  /* Dashboard cards */
+  .dashboard-stats {
+    grid-template-columns: 1fr 1fr !important;
+  }
+
+  /* Part-time staff form */
+  .part-time-form {
+    grid-template-columns: 1fr !important;
+  }
+
+  /* Salary management table */
+  .salary-table {
+    font-size: 0.75rem;
+  }
+
+  .salary-table th,
+  .salary-table td {
+    padding: 0.5rem 0.25rem;
+  }
+}
+
+@media screen and (max-width: 480px) {
+  /* Extra small screens */
+  .dashboard-stats {
+    grid-template-columns: 1fr !important;
+  }
+
+  .page-title {
+    font-size: 1.25rem !important;
+  }
+
+  .stats-card h3 {
+    font-size: 1rem !important;
+  }
+
+  .stats-card .text-3xl {
+    font-size: 1.5rem !important;
+  }
+
+  /* Navigation even more compact */
+  .navigation-tab {
+    padding: 0.5rem;
+    font-size: 0.75rem;
+  }
+
+  /* Table text smaller */
+  .table-container {
+    font-size: 0.75rem;
+  }
+
+  /* Modal full screen on very small devices */
+  .modal-container {
+    margin: 0.5rem;
+    max-width: calc(100vw - 1rem);
+    max-height: calc(100vh - 1rem);
+  }
+}
+
+/* Utility classes for responsive design */
+.mobile-hidden {
+  @media screen and (max-width: 768px) {
+    display: none !important;
+  }
+}
+
+.mobile-visible {
+  display: none !important;
+  @media screen and (max-width: 768px) {
+    display: block !important;
+  }
+}
+
+.mobile-flex {
+  @media screen and (max-width: 768px) {
+    display: flex !important;
+  }
+}
+
+.mobile-grid {
+  @media screen and (max-width: 768px) {
+    display: grid !important;
+  }
+}
