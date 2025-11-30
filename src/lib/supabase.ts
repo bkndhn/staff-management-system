@@ -3,11 +3,21 @@ import { createClient } from '@supabase/supabase-js';
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
-if (!supabaseUrl || !supabaseAnonKey) {
-  throw new Error('Missing Supabase environment variables');
+// Check if Supabase is properly configured
+export const isSupabaseConfigured = !!(supabaseUrl && supabaseAnonKey);
+
+// Log configuration status for debugging
+if (!isSupabaseConfigured) {
+  console.error('❌ Supabase environment variables are missing!');
+  console.error('Required variables: VITE_SUPABASE_URL, VITE_SUPABASE_ANON_KEY');
+  console.error('Please check your .env file or deployment environment settings.');
 }
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey);
+// Create a dummy client if env vars are missing (prevents app crash)
+// The app will still render and show an error message to the user
+export const supabase = isSupabaseConfigured
+  ? createClient(supabaseUrl, supabaseAnonKey)
+  : createClient('https://placeholder.supabase.co', 'placeholder-key');
 
 // Database types
 export interface DatabaseStaff {

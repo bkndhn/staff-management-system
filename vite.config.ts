@@ -7,4 +7,16 @@ export default defineConfig({
   optimizeDeps: {
     include: ['lucide-react'],
   },
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          'react-vendor': ['react', 'react-dom'],
+          'supabase': ['@supabase/supabase-js'],
+          'pdf': ['jspdf', 'jspdf-autotable'],
+          'xlsx': ['xlsx'],
+        },
+      },
+    },
+  },
 });
