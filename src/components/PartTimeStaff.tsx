@@ -129,29 +129,17 @@ const PartTimeStaff: React.FC<PartTimeStaffProps> = ({
       const currentMonth = today.getMonth();
       const currentYear = today.getFullYear();
 
-      // If we are viewing the current month/year, default to the current week
       if (selectedMonth === currentMonth && selectedYear === currentYear) {
         const weeks = getWeeksInMonth(currentYear, currentMonth);
         const currentWeekIndex = weeks.findIndex(week => {
           const weekStart = week.startDate;
           const weekEnd = week.endDate;
-          // Reset time part for accurate comparison
-          const todayDate = new Date(today.getFullYear(), today.getMonth(), today.getDate());
-          const start = new Date(weekStart.getFullYear(), weekStart.getMonth(), weekStart.getDate());
-          const end = new Date(weekEnd.getFullYear(), weekEnd.getMonth(), weekEnd.getDate());
-
-          return todayDate >= start && todayDate <= end;
+          return today >= weekStart && today <= weekEnd;
         });
 
         if (currentWeekIndex !== -1) {
           setSelectedWeek(currentWeekIndex);
-        } else {
-          // Fallback: if today is not found (e.g. edge case), select the last week
-          setSelectedWeek(weeks.length - 1);
         }
-      } else {
-        // If viewing a different month, select the first week
-        setSelectedWeek(0);
       }
     }
   }, [reportType, selectedMonth, selectedYear]);
@@ -933,9 +921,7 @@ const PartTimeStaff: React.FC<PartTimeStaffProps> = ({
                                     );
                                     return dayAttendance ? (
                                       <div key={day.date} className="text-xs">
-                                        <span className="font-medium">
-                                          {dayAttendance.shift} ({new Date(day.date).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: '2-digit' })})
-                                        </span>
+                                        <span className="font-medium">{dayAttendance.shift}</span>
                                         {(dayAttendance.arrivalTime || dayAttendance.leavingTime) && (
                                           <div className="text-gray-500">
                                             {dayAttendance.arrivalTime && `In: ${new Date(`2000-01-01T${dayAttendance.arrivalTime}`).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })}`}
