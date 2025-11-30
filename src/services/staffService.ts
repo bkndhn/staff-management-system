@@ -19,7 +19,7 @@ export const staffService = {
 
   async create(staff: Omit<Staff, 'id'>): Promise<Staff> {
     const dbStaff = this.mapToDatabase(staff);
-    
+
     const { data, error } = await supabase
       .from('staff')
       .insert([dbStaff])
@@ -51,6 +51,8 @@ export const staffService = {
     if (updates.totalSalary !== undefined) dbUpdates.total_salary = updates.totalSalary;
     if (updates.joinedDate !== undefined) dbUpdates.joined_date = updates.joinedDate;
     if (updates.isActive !== undefined) dbUpdates.is_active = updates.isActive;
+    if (updates.sundayPenalty !== undefined) dbUpdates.sunday_penalty = updates.sundayPenalty;
+    if (updates.salaryCalculationDays !== undefined) dbUpdates.salary_calculation_days = updates.salaryCalculationDays;
 
     const { data, error } = await supabase
       .from('staff')
@@ -91,7 +93,9 @@ export const staffService = {
       hra: dbStaff.hra,
       totalSalary: dbStaff.total_salary,
       joinedDate: dbStaff.joined_date,
-      isActive: dbStaff.is_active
+      isActive: dbStaff.is_active,
+      sundayPenalty: dbStaff.sunday_penalty ?? true,
+      salaryCalculationDays: dbStaff.salary_calculation_days || 30
     };
   },
 
@@ -106,7 +110,9 @@ export const staffService = {
       hra: staff.hra,
       total_salary: staff.totalSalary,
       joined_date: staff.joinedDate,
-      is_active: staff.isActive
+      is_active: staff.isActive,
+      sunday_penalty: staff.sundayPenalty ?? true,
+      salary_calculation_days: staff.salaryCalculationDays || 30
     };
   }
 };

@@ -13,6 +13,7 @@ export interface Staff {
   initialSalary?: number; // Store first salary for hike tracking
   salarySupplements?: Record<string, number>; // For custom salary categories
   sundayPenalty: boolean;
+  salaryCalculationDays?: number; // Number of days to use for salary calculation (for prorated salaries)
 }
 
 export interface SalaryCategory {

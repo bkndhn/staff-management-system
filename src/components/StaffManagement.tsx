@@ -44,9 +44,10 @@ const StaffManagement: React.FC<StaffManagementProps> = ({
     basicSalary: 15000,
     incentive: 10000,
     hra: 0,
-    joinedDate: '',
+    joinedDate: new Date().toISOString().split('T')[0],
     salarySupplements: {} as Record<string, number>,
-    sundayPenalty: true
+    sundayPenalty: true,
+    salaryCalculationDays: 30
   });
 
   const activeStaff = staff.filter(member => member.isActive);
@@ -58,9 +59,10 @@ const StaffManagement: React.FC<StaffManagementProps> = ({
       basicSalary: 15000,
       incentive: 10000,
       hra: 0,
-      joinedDate: '',
+      joinedDate: new Date().toISOString().split('T')[0],
       salarySupplements: {},
-      sundayPenalty: true
+      sundayPenalty: true,
+      salaryCalculationDays: 30
     });
   };
 
@@ -80,7 +82,8 @@ const StaffManagement: React.FC<StaffManagementProps> = ({
         ...formData,
         totalSalary,
         experience,
-        type: 'full-time'
+        type: 'full-time',
+        sundayPenalty: formData.sundayPenalty
       });
       setEditingStaff(null);
     } else {
@@ -102,7 +105,8 @@ const StaffManagement: React.FC<StaffManagementProps> = ({
         type: 'full-time',
         isActive: true,
         initialSalary: totalSalary,
-        salarySupplements: formData.salarySupplements
+        salarySupplements: formData.salarySupplements,
+        sundayPenalty: formData.sundayPenalty
       });
       setShowAddForm(false);
     }
@@ -120,7 +124,8 @@ const StaffManagement: React.FC<StaffManagementProps> = ({
       hra: staffMember.hra,
       joinedDate: staffMember.joinedDate,
       salarySupplements: supplements,
-      sundayPenalty: staffMember.sundayPenalty ?? true
+      sundayPenalty: staffMember.sundayPenalty ?? true,
+      salaryCalculationDays: staffMember.salaryCalculationDays || 30
     });
 
     // Auto-scroll to the form at the top
@@ -261,6 +266,18 @@ const StaffManagement: React.FC<StaffManagementProps> = ({
                 value={formData.hra}
                 onChange={(e) => setFormData({ ...formData, hra: Number(e.target.value) })}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Salary Calculation Days</label>
+              <input
+                type="number"
+                value={formData.salaryCalculationDays}
+                onChange={(e) => setFormData({ ...formData, salaryCalculationDays: Number(e.target.value) })}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                min="1"
+                max="31"
+                title="Number of days to use for salary calculation (for prorated salaries)"
               />
             </div>
 

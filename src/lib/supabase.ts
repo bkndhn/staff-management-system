@@ -32,6 +32,8 @@ export interface DatabaseStaff {
   total_salary: number;
   joined_date: string;
   is_active: boolean;
+  sunday_penalty: boolean;
+  salary_calculation_days: number;
   created_at: string;
   updated_at: string;
 }

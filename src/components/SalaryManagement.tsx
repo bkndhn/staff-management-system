@@ -19,14 +19,20 @@ const SalaryManagement: React.FC<SalaryManagementProps> = ({
 }) => {
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth());
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
+  const [locationFilter, setLocationFilter] = useState<'All' | 'Big Shop' | 'Small Shop' | 'Godown'>('All');
   const [editMode, setEditMode] = useState(false);
   const [tempAdvances, setTempAdvances] = useState<{ [key: string]: Partial<AdvanceDeduction> }>({});
   const [saving, setSaving] = useState(false);
 
   const activeStaff = staff.filter(member => member.isActive);
 
+  // Filter staff by location
+  const filteredStaff = locationFilter === 'All'
+    ? activeStaff
+    : activeStaff.filter(member => member.location === locationFilter);
+
   const calculateSalaryDetails = (): SalaryDetail[] => {
-    return activeStaff.map(member => {
+    return filteredStaff.map(member => {
       const attendanceMetrics = calculateAttendanceMetrics(member.id, attendance, selectedYear, selectedMonth);
       const memberAdvances = advances.find(adv =>
         adv.staffId === member.id &&
@@ -231,6 +237,19 @@ const SalaryManagement: React.FC<SalaryManagementProps> = ({
                   {new Date().getFullYear() - 2 + i}
                 </option>
               ))}
+            </select>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Location</label>
+            <select
+              value={locationFilter}
+              onChange={(e) => setLocationFilter(e.target.value as 'All' | 'Big Shop' | 'Small Shop' | 'Godown')}
+              className="w-full sm:w-auto px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            >
+              <option value="All">All Locations</option>
+              <option value="Big Shop">Big Shop</option>
+              <option value="Small Shop">Small Shop</option>
+              <option value="Godown">Godown</option>
             </select>
           </div>
         </div>

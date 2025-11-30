@@ -216,7 +216,7 @@ export const calculateSalary = (
   // Calculate Sunday penalty - including half-day Sunday penalty
   let sundayPenalty = 0;
 
-  // Only apply penalty if enabled for this staff member (default to true)
+  // Only apply penalty if enabled for this staff member (default to true if undefined)
   if (staff.sundayPenalty !== false) {
     // Get Sunday half-day count from attendance
     const monthlyAttendance = attendance.filter(record => {
