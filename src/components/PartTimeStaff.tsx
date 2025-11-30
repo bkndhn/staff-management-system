@@ -131,10 +131,12 @@ const PartTimeStaff: React.FC<PartTimeStaffProps> = ({
 
       if (selectedMonth === currentMonth && selectedYear === currentYear) {
         const weeks = getWeeksInMonth(currentYear, currentMonth);
+        const todayTime = today.getTime();
+
         const currentWeekIndex = weeks.findIndex(week => {
-          const weekStart = week.startDate;
-          const weekEnd = week.endDate;
-          return today >= weekStart && today <= weekEnd;
+          const weekStartTime = week.startDate.getTime();
+          const weekEndTime = week.endDate.getTime();
+          return todayTime >= weekStartTime && todayTime <= weekEndTime;
         });
 
         if (currentWeekIndex !== -1) {
@@ -921,7 +923,15 @@ const PartTimeStaff: React.FC<PartTimeStaffProps> = ({
                                     );
                                     return dayAttendance ? (
                                       <div key={day.date} className="text-xs">
-                                        <span className="font-medium">{dayAttendance.shift}</span>
+                                        <span className="font-medium">
+                                          {dayAttendance.shift} ({(() => {
+                                            const d = new Date(day.date);
+                                            const dd = String(d.getDate()).padStart(2, '0');
+                                            const mm = String(d.getMonth() + 1).padStart(2, '0');
+                                            const yy = String(d.getFullYear()).slice(-2);
+                                            return `${dd}/${mm}/${yy}`;
+                                          })()})
+                                        </span>
                                         {(dayAttendance.arrivalTime || dayAttendance.leavingTime) && (
                                           <div className="text-gray-500">
                                             {dayAttendance.arrivalTime && `In: ${new Date(`2000-01-01T${dayAttendance.arrivalTime}`).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })}`}
