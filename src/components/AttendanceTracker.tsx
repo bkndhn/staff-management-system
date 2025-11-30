@@ -241,7 +241,7 @@ const AttendanceTracker: React.FC<AttendanceTrackerProps> = ({
             <thead>
               <tr className="bg-gray-50">
                 <th className="px-2 md:px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">S.No</th>
-                <th className="px-2 md:px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
+                <th className="px-2 md:px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider sticky left-0 z-10 bg-gray-50">Name</th>
                 {days.map(day => {
                   const date = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
                   const isDateSunday = isSunday(date);
@@ -261,7 +261,7 @@ const AttendanceTracker: React.FC<AttendanceTrackerProps> = ({
                 .map((member, index) => (
                   <tr key={member.id} className="hover:bg-gray-50">
                     <td className="px-2 md:px-4 py-4 whitespace-nowrap text-sm text-gray-900">{index + 1}</td>
-                    <td className="px-2 md:px-4 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{member.name}</td>
+                    <td className="px-2 md:px-4 py-4 whitespace-nowrap text-sm font-medium text-gray-900 sticky left-0 z-10 bg-white">{member.name}</td>
                     {days.map(day => {
                       const date = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
                       const attendanceRecord = getAttendanceForDate(member.id, date);
@@ -509,7 +509,7 @@ const AttendanceTracker: React.FC<AttendanceTrackerProps> = ({
             <thead className="bg-gray-50">
               <tr>
                 <th className="px-3 md:px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">S.No</th>
-                <th className="px-3 md:px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
+                <th className="px-3 md:px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider sticky left-0 z-10 bg-gray-50">Name</th>
                 <th className="px-3 md:px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Location</th>
                 <th className="px-3 md:px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Type</th>
                 <th className="px-3 md:px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Shift</th>
@@ -524,7 +524,7 @@ const AttendanceTracker: React.FC<AttendanceTrackerProps> = ({
               {combinedAttendanceData.map((data) => (
                 <tr key={data.id} className="hover:bg-gray-50">
                   <td className="px-3 md:px-6 py-4 whitespace-nowrap text-sm text-gray-900">{data.serialNo}</td>
-                  <td className="px-3 md:px-6 py-4 whitespace-nowrap">
+                  <td className="px-3 md:px-6 py-4 whitespace-nowrap sticky left-0 z-10 bg-white">
                     <div>
                       <div className="text-sm font-medium text-gray-900">{data.name}</div>
                       <div className="text-sm text-gray-500">{data.type}</div>

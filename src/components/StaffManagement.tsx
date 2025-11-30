@@ -45,7 +45,8 @@ const StaffManagement: React.FC<StaffManagementProps> = ({
     incentive: 10000,
     hra: 0,
     joinedDate: '',
-    salarySupplements: {} as Record<string, number>
+    salarySupplements: {} as Record<string, number>,
+    sundayPenalty: true
   });
 
   const activeStaff = staff.filter(member => member.isActive);
@@ -58,7 +59,8 @@ const StaffManagement: React.FC<StaffManagementProps> = ({
       incentive: 10000,
       hra: 0,
       joinedDate: '',
-      salarySupplements: {}
+      salarySupplements: {},
+      sundayPenalty: true
     });
   };
 
@@ -117,7 +119,8 @@ const StaffManagement: React.FC<StaffManagementProps> = ({
       incentive: staffMember.incentive,
       hra: staffMember.hra,
       joinedDate: staffMember.joinedDate,
-      salarySupplements: supplements
+      salarySupplements: supplements,
+      sundayPenalty: staffMember.sundayPenalty ?? true
     });
 
     // Auto-scroll to the form at the top
@@ -261,6 +264,18 @@ const StaffManagement: React.FC<StaffManagementProps> = ({
               />
             </div>
 
+            <div className="flex items-center h-full pt-6">
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={formData.sundayPenalty}
+                  onChange={(e) => setFormData({ ...formData, sundayPenalty: e.target.checked })}
+                  className="w-5 h-5 text-blue-600 rounded focus:ring-blue-500 border-gray-300"
+                />
+                <span className="text-sm font-medium text-gray-700">Apply Sunday Penalty</span>
+              </label>
+            </div>
+
             {/* Dynamic Salary Categories */}
             {salaryCategories.filter(c => !['basic', 'incentive', 'hra'].includes(c.id)).map(category => (
               <div key={category.id}>
@@ -392,7 +407,7 @@ const StaffManagement: React.FC<StaffManagementProps> = ({
             <thead className="bg-gray-50">
               <tr>
                 <th className="px-3 md:px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">S.No</th>
-                <th className="px-3 md:px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
+                <th className="px-3 md:px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider sticky left-0 z-10 bg-gray-50">Name</th>
                 <th className="px-3 md:px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Location</th>
                 <th className="px-3 md:px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Experience</th>
                 <th className="px-3 md:px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Basic</th>
@@ -411,7 +426,7 @@ const StaffManagement: React.FC<StaffManagementProps> = ({
                 return (
                   <tr key={member.id} className="hover:bg-gray-50">
                     <td className="px-3 md:px-6 py-4 whitespace-nowrap text-sm text-gray-900">{index + 1}</td>
-                    <td className="px-3 md:px-6 py-4 whitespace-nowrap">
+                    <td className="px-3 md:px-6 py-4 whitespace-nowrap sticky left-0 z-10 bg-white">
                       <div>
                         <div className="text-sm font-medium text-gray-900">{member.name}</div>
                         <div className="text-sm text-gray-500 flex items-center gap-1">

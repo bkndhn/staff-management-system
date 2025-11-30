@@ -17,13 +17,13 @@ const calculateCurrencyNotes = (amount: number): Record<string, number> => {
   const denominations = [500, 200, 100, 50, 20, 10];
   const breakdown: Record<string, number> = {};
   let remaining = Math.round(amount);
-  
+
   denominations.forEach(denom => {
     const count = Math.floor(remaining / denom);
     breakdown[denom.toString()] = count;
     remaining = remaining % denom;
   });
-  
+
   return breakdown;
 };
 
@@ -103,12 +103,12 @@ export const exportSalaryToExcel = (
   }));
 
   const wb = XLSX.utils.book_new();
-  
+
   if (fullTimeData.length > 0) {
     const ws1 = XLSX.utils.json_to_sheet(fullTimeData);
     XLSX.utils.book_append_sheet(wb, ws1, 'Full-Time Salary');
   }
-  
+
   if (partTimeData.length > 0) {
     const ws2 = XLSX.utils.json_to_sheet(partTimeData);
     XLSX.utils.book_append_sheet(wb, ws2, 'Part-Time Salary');
@@ -126,11 +126,11 @@ export const exportAttendancePDF = (
   monthlyData?: { month: number; year: number }
 ) => {
   const doc = new jsPDF();
-  
+
   // Header
   doc.setFontSize(20);
   doc.text('Staff Attendance Report', 20, 20);
-  
+
   if (isMonthly && monthlyData) {
     doc.setFontSize(12);
     doc.text(`Month: ${new Date(0, monthlyData.month).toLocaleString('default', { month: 'long' })} ${monthlyData.year}`, 20, 35);
@@ -184,7 +184,7 @@ export const exportSalaryPDF = (
   year: number
 ) => {
   const doc = new jsPDF('landscape');
-  
+
   // Header
   doc.setFontSize(20);
   doc.text('Salary Report', 20, 20);
@@ -224,7 +224,7 @@ export const exportSalaryPDF = (
       styles: { fontSize: 8 },
       headStyles: { fillColor: [34, 197, 94] }
     });
-    
+
     currentY = (doc as any).lastAutoTable.finalY + 20;
   }
 
@@ -234,7 +234,7 @@ export const exportSalaryPDF = (
     doc.setFontSize(14);
     doc.text('Part-Time Staff Salary Report', 20, currentY);
     currentY += 15;
-    
+
     const partTimeData = partTimeSalaries.map((detail, index) => [
       index + 1,
       detail.staffName,
@@ -250,21 +250,21 @@ export const exportSalaryPDF = (
       styles: { fontSize: 8 },
       headStyles: { fillColor: [168, 85, 247] }
     });
-    
+
     currentY = (doc as any).lastAutoTable.finalY + 20;
-    
+
     // Add total part-time earnings
     const totalPartTimeEarnings = partTimeSalaries.reduce((sum, salary) => sum + salary.totalEarnings, 0);
     doc.setFontSize(12);
     doc.text(`Total Part-Time Earnings: ${totalPartTimeEarnings}`, 20, currentY);
     currentY += 15;
-    
+
     // Calculate and display currency note breakdown
     const noteBreakdown = calculateCurrencyNotes(totalPartTimeEarnings);
     doc.setFontSize(10);
     doc.text('Currency Note Breakdown:', 20, currentY);
     currentY += 10;
-    
+
     Object.entries(noteBreakdown).forEach(([denomination, count]) => {
       if (count > 0) {
         doc.text(`${denomination}s = ${count}`, 30, currentY);
@@ -286,11 +286,11 @@ export const exportPartTimeSalaryPDF = (
   dateRange?: { start: string; end: string }
 ) => {
   const doc = new jsPDF('landscape');
-  
+
   // Header
   doc.setFontSize(20);
   doc.text('Part-Time Staff Salary Report', 20, 20);
-  
+
   // Date range header
   doc.setFontSize(12);
   if (reportType === 'weekly' && weekData) {
@@ -320,21 +320,28 @@ export const exportPartTimeSalaryPDF = (
       styles: { fontSize: 10 },
       headStyles: { fillColor: [168, 85, 247] }
     });
-    
+
     currentY = (doc as any).lastAutoTable.finalY + 20;
-    
+
     // Add total part-time earnings
     const totalPartTimeEarnings = partTimeSalaries.reduce((sum, salary) => sum + salary.totalEarnings, 0);
     doc.setFontSize(12);
     doc.text(`Total Part-Time Earnings: ${totalPartTimeEarnings}`, 20, currentY);
     currentY += 15;
-    
-    // Calculate and display currency note breakdown
-    const noteBreakdown = calculateCurrencyNotes(totalPartTimeEarnings);
+
+    // Calculate currency note breakdown by summing individual staff breakdowns
+    const noteBreakdown: Record<string, number> = {};
+    partTimeSalaries.forEach(salary => {
+      const individualBreakdown = calculateCurrencyNotes(salary.totalEarnings);
+      Object.entries(individualBreakdown).forEach(([denom, count]) => {
+        noteBreakdown[denom] = (noteBreakdown[denom] || 0) + count;
+      });
+    });
+
     doc.setFontSize(10);
     doc.text('Currency Note Breakdown:', 20, currentY);
     currentY += 10;
-    
+
     Object.entries(noteBreakdown).forEach(([denomination, count]) => {
       if (count > 0) {
         doc.text(`${denomination}s = ${count}`, 30, currentY);
@@ -343,18 +350,18 @@ export const exportPartTimeSalaryPDF = (
     });
   }
 
-  const fileName = reportType === 'weekly' && weekData 
+  const fileName = reportType === 'weekly' && weekData
     ? `part-time-salary-${weekData.start}-to-${weekData.end}.pdf`
     : reportType === 'dateRange' && dateRange
-    ? `part-time-salary-${dateRange.start}-to-${dateRange.end}.pdf`
-    : `part-time-salary-${new Date(0, month).toLocaleString('default', { month: 'long' })}-${year}.pdf`;
-    
+      ? `part-time-salary-${dateRange.start}-to-${dateRange.end}.pdf`
+      : `part-time-salary-${new Date(0, month).toLocaleString('default', { month: 'long' })}-${year}.pdf`;
+
   doc.save(fileName);
 };
 
 export const exportOldStaffPDF = (oldStaffRecords: OldStaffRecord[]) => {
   const doc = new jsPDF('landscape');
-  
+
   // Header
   doc.setFontSize(20);
   doc.text('Old Staff Records', 20, 20);

@@ -11,16 +11,16 @@ interface SalaryManagementProps {
   onUpdateAdvances: (staffId: string, month: number, year: number, advances: Partial<AdvanceDeduction>) => void;
 }
 
-const SalaryManagement: React.FC<SalaryManagementProps> = ({ 
-  staff, 
-  attendance, 
-  advances, 
-  onUpdateAdvances 
+const SalaryManagement: React.FC<SalaryManagementProps> = ({
+  staff,
+  attendance,
+  advances,
+  onUpdateAdvances
 }) => {
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth());
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
   const [editMode, setEditMode] = useState(false);
-  const [tempAdvances, setTempAdvances] = useState<{[key: string]: Partial<AdvanceDeduction>}>({});
+  const [tempAdvances, setTempAdvances] = useState<{ [key: string]: Partial<AdvanceDeduction> }>({});
   const [saving, setSaving] = useState(false);
 
   const activeStaff = staff.filter(member => member.isActive);
@@ -28,12 +28,12 @@ const SalaryManagement: React.FC<SalaryManagementProps> = ({
   const calculateSalaryDetails = (): SalaryDetail[] => {
     return activeStaff.map(member => {
       const attendanceMetrics = calculateAttendanceMetrics(member.id, attendance, selectedYear, selectedMonth);
-      const memberAdvances = advances.find(adv => 
-        adv.staffId === member.id && 
-        adv.month === selectedMonth && 
+      const memberAdvances = advances.find(adv =>
+        adv.staffId === member.id &&
+        adv.month === selectedMonth &&
         adv.year === selectedYear
       );
-      
+
       return calculateSalary(member, attendanceMetrics, memberAdvances, advances, attendance, selectedMonth, selectedYear);
     });
   };
@@ -42,9 +42,9 @@ const SalaryManagement: React.FC<SalaryManagementProps> = ({
   const calculatePartTimeSalaries = (): PartTimeSalaryDetail[] => {
     const monthlyAttendance = attendance.filter(record => {
       const recordDate = new Date(record.date);
-      return record.isPartTime && 
-             recordDate.getMonth() === selectedMonth && 
-             recordDate.getFullYear() === selectedYear;
+      return record.isPartTime &&
+        recordDate.getMonth() === selectedMonth &&
+        recordDate.getFullYear() === selectedYear;
     });
 
     const uniqueStaff = new Map();
@@ -57,7 +57,7 @@ const SalaryManagement: React.FC<SalaryManagementProps> = ({
       }
     });
 
-    return Array.from(uniqueStaff.values()).map(staff => 
+    return Array.from(uniqueStaff.values()).map(staff =>
       calculatePartTimeSalary(
         staff.name,
         staff.location,
@@ -75,15 +75,15 @@ const SalaryManagement: React.FC<SalaryManagementProps> = ({
   const averageAttendance = salaryDetails.reduce((sum, detail) => sum + detail.presentDays + (detail.halfDays * 0.5), 0) / salaryDetails.length;
 
   const handleEnableEditAll = () => {
-    const initialTempAdvances: {[key: string]: Partial<AdvanceDeduction>} = {};
-    
+    const initialTempAdvances: { [key: string]: Partial<AdvanceDeduction> } = {};
+
     activeStaff.forEach(member => {
-      const currentAdvances = advances.find(adv => 
-        adv.staffId === member.id && 
-        adv.month === selectedMonth && 
+      const currentAdvances = advances.find(adv =>
+        adv.staffId === member.id &&
+        adv.month === selectedMonth &&
         adv.year === selectedYear
       );
-      
+
       // Get previous month's advance for old advance
       let prevMonth = selectedMonth - 1;
       let prevYear = selectedYear;
@@ -91,20 +91,20 @@ const SalaryManagement: React.FC<SalaryManagementProps> = ({
         prevMonth = 11;
         prevYear = selectedYear - 1;
       }
-      
-      const previousAdvance = advances.find(adv => 
-        adv.staffId === member.id && 
-        adv.month === prevMonth && 
+
+      const previousAdvance = advances.find(adv =>
+        adv.staffId === member.id &&
+        adv.month === prevMonth &&
         adv.year === prevYear
       );
-      
+
       initialTempAdvances[member.id] = {
         oldAdvance: previousAdvance?.newAdvance || 0,
         currentAdvance: currentAdvances?.currentAdvance || 0,
         deduction: currentAdvances?.deduction || 0
       };
     });
-    
+
     setTempAdvances(initialTempAdvances);
     setEditMode(true);
   };
@@ -116,7 +116,7 @@ const SalaryManagement: React.FC<SalaryManagementProps> = ({
         const temp = tempAdvances[staffId];
         if (temp) {
           const newAdvance = roundToNearest10((temp.oldAdvance || 0) + (temp.currentAdvance || 0) - (temp.deduction || 0));
-          
+
           return onUpdateAdvances(staffId, selectedMonth, selectedYear, {
             ...temp,
             newAdvance,
@@ -125,9 +125,9 @@ const SalaryManagement: React.FC<SalaryManagementProps> = ({
         }
         return Promise.resolve();
       });
-      
+
       await Promise.all(savePromises);
-      
+
       setEditMode(false);
       setTempAdvances({});
     } catch (error) {
@@ -152,9 +152,9 @@ const SalaryManagement: React.FC<SalaryManagementProps> = ({
   };
 
   const getAdvanceForStaff = (staffId: string) => {
-    return advances.find(adv => 
-      adv.staffId === staffId && 
-      adv.month === selectedMonth && 
+    return advances.find(adv =>
+      adv.staffId === staffId &&
+      adv.month === selectedMonth &&
       adv.year === selectedYear
     );
   };
@@ -162,11 +162,11 @@ const SalaryManagement: React.FC<SalaryManagementProps> = ({
   const updateTempAdvance = (staffId: string, field: string, value: number) => {
     const current = tempAdvances[staffId] || {};
     const updated = { ...current, [field]: value };
-    
+
     // Auto-calculate new advance
     const newAdvance = roundToNearest10((updated.oldAdvance || 0) + (updated.currentAdvance || 0) - (updated.deduction || 0));
     updated.newAdvance = newAdvance;
-    
+
     setTempAdvances({
       ...tempAdvances,
       [staffId]: updated
@@ -182,7 +182,7 @@ const SalaryManagement: React.FC<SalaryManagementProps> = ({
           Enhanced Salary Management
         </h1>
         <div className="flex flex-col sm:flex-row gap-2 md:gap-3 w-full md:w-auto">
-          <button 
+          <button
             onClick={handleExportExcel}
             className="flex items-center justify-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm"
           >
@@ -190,7 +190,7 @@ const SalaryManagement: React.FC<SalaryManagementProps> = ({
             <span className="hidden sm:inline">Export Excel</span>
             <span className="sm:hidden">Excel</span>
           </button>
-          <button 
+          <button
             onClick={handleExportPDF}
             className="flex items-center justify-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm"
           >
@@ -352,13 +352,13 @@ const SalaryManagement: React.FC<SalaryManagementProps> = ({
             </div>
           </div>
         </div>
-        
+
         <div className="overflow-x-auto">
           <table className="w-full">
             <thead className="bg-gray-50">
               <tr>
                 <th className="px-2 md:px-4 py-3 md:py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">S.No</th>
-                <th className="px-2 md:px-4 py-3 md:py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
+                <th className="px-2 md:px-4 py-3 md:py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider sticky left-0 z-10 bg-gray-50">Name</th>
                 <th className="px-2 md:px-4 py-3 md:py-4 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Present</th>
                 <th className="px-2 md:px-4 py-3 md:py-4 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Half Days</th>
                 <th className="px-2 md:px-4 py-3 md:py-4 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Leave</th>
@@ -379,11 +379,11 @@ const SalaryManagement: React.FC<SalaryManagementProps> = ({
               {salaryDetails.map((detail, index) => {
                 const staffMember = activeStaff.find(s => s.id === detail.staffId);
                 const tempData = tempAdvances[detail.staffId];
-                
+
                 return (
                   <tr key={detail.staffId} className="hover:bg-gray-50 text-xs md:text-sm">
                     <td className="px-2 md:px-4 py-3 whitespace-nowrap text-gray-900">{index + 1}</td>
-                    <td className="px-2 md:px-4 py-3 whitespace-nowrap font-medium text-gray-900">
+                    <td className="px-2 md:px-4 py-3 whitespace-nowrap font-medium text-gray-900 sticky left-0 z-10 bg-white">
                       {staffMember?.name}
                     </td>
                     <td className="px-2 md:px-4 py-3 whitespace-nowrap text-center">
@@ -397,16 +397,14 @@ const SalaryManagement: React.FC<SalaryManagementProps> = ({
                       </span>
                     </td>
                     <td className="px-2 md:px-4 py-3 whitespace-nowrap text-center">
-                      <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                        detail.leaveDays > 0 ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800'
-                      }`}>
+                      <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${detail.leaveDays > 0 ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800'
+                        }`}>
                         {detail.leaveDays}
                       </span>
                     </td>
                     <td className="px-2 md:px-4 py-3 whitespace-nowrap text-center">
-                      <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                        detail.sundayAbsents > 0 ? 'bg-red-100 text-red-800' : 'bg-gray-100 text-gray-800'
-                      }`}>
+                      <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${detail.sundayAbsents > 0 ? 'bg-red-100 text-red-800' : 'bg-gray-100 text-gray-800'
+                        }`}>
                         {detail.sundayAbsents}
                       </span>
                     </td>
@@ -483,13 +481,13 @@ const SalaryManagement: React.FC<SalaryManagementProps> = ({
               Rate: ₹350/day (Mon-Sat), ₹400/day (Sunday)
             </p>
           </div>
-          
+
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead className="bg-gray-50">
                 <tr>
                   <th className="px-3 md:px-6 py-3 md:py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">S.No</th>
-                  <th className="px-3 md:px-6 py-3 md:py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
+                  <th className="px-3 md:px-6 py-3 md:py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider sticky left-0 z-10 bg-gray-50">Name</th>
                   <th className="px-3 md:px-6 py-3 md:py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Location</th>
                   <th className="px-3 md:px-6 py-3 md:py-4 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Total Days</th>
                   <th className="px-3 md:px-6 py-3 md:py-4 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Weekly Breakdown</th>
@@ -500,7 +498,7 @@ const SalaryManagement: React.FC<SalaryManagementProps> = ({
                 {partTimeSalaries.map((salary, index) => (
                   <tr key={`${salary.staffName}-${index}`} className="hover:bg-gray-50 text-xs md:text-sm">
                     <td className="px-3 md:px-6 py-4 whitespace-nowrap text-gray-900">{index + 1}</td>
-                    <td className="px-3 md:px-6 py-4 whitespace-nowrap font-medium text-gray-900">
+                    <td className="px-3 md:px-6 py-4 whitespace-nowrap font-medium text-gray-900 sticky left-0 z-10 bg-white">
                       {salary.staffName}
                     </td>
                     <td className="px-3 md:px-6 py-4 whitespace-nowrap">

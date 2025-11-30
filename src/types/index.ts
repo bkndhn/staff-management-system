@@ -12,6 +12,7 @@ export interface Staff {
   isActive: boolean;
   initialSalary?: number; // Store first salary for hike tracking
   salarySupplements?: Record<string, number>; // For custom salary categories
+  sundayPenalty: boolean;
 }
 
 export interface SalaryCategory {

@@ -20,15 +20,15 @@ export const getDaysInMonth = (year: number, month: number): number => {
 export const calculateExperience = (joinedDate: string): string => {
   const joined = new Date(joinedDate);
   const now = new Date();
-  
+
   let years = now.getFullYear() - joined.getFullYear();
   let months = now.getMonth() - joined.getMonth();
-  
+
   if (months < 0) {
     years--;
     months += 12;
   }
-  
+
   return `${years}y ${months}m`;
 };
 
@@ -37,7 +37,7 @@ export const getPartTimeDailySalary = (date: string, isOverride: boolean = false
   if (isOverride && overrideAmount !== undefined) {
     return overrideAmount;
   }
-  
+
   const isSundayDate = isSunday(date);
   return isSundayDate ? 400 : 350;
 };
@@ -51,10 +51,10 @@ export const calculateAttendanceMetrics = (
 ) => {
   const monthlyAttendance = attendance.filter(record => {
     const recordDate = new Date(record.date);
-    return record.staffId === staffId && 
-           recordDate.getMonth() === month && 
-           recordDate.getFullYear() === year &&
-           !record.isPartTime; // Only full-time staff
+    return record.staffId === staffId &&
+      recordDate.getMonth() === month &&
+      recordDate.getFullYear() === year &&
+      !record.isPartTime; // Only full-time staff
   });
 
   const presentDays = monthlyAttendance
@@ -93,12 +93,9 @@ export const calculatePartTimeSalary = (
   month: number
 ): PartTimeSalaryDetail => {
   const monthlyAttendance = attendance.filter(record => {
-    const recordDate = new Date(record.date);
-    return record.staffName === staffName && 
-           recordDate.getMonth() === month && 
-           recordDate.getFullYear() === year &&
-           record.isPartTime &&
-           record.status === 'Present';
+    return record.staffName === staffName &&
+      record.isPartTime &&
+      record.status === 'Present';
   });
 
   // Group by weeks
@@ -117,12 +114,12 @@ export const calculatePartTimeSalary = (
   Object.keys(weeks).forEach(weekKey => {
     const weekNum = parseInt(weekKey);
     const weekAttendance = weeks[weekNum];
-    
+
     const dailySalaries: DailySalary[] = weekAttendance.map(record => {
       const salary = record.salary || getPartTimeDailySalary(record.date, record.salaryOverride, record.salary);
       totalEarnings += salary;
       totalDays++;
-      
+
       return {
         date: record.date,
         dayOfWeek: new Date(record.date).toLocaleDateString('en-US', { weekday: 'long' }),
@@ -134,7 +131,7 @@ export const calculatePartTimeSalary = (
     });
 
     const weekTotal = dailySalaries.reduce((sum, day) => sum + day.salary, 0);
-    
+
     weeklyBreakdown.push({
       week: weekNum,
       days: dailySalaries,
@@ -165,15 +162,15 @@ export const getPreviousMonthAdvance = (
 ): number => {
   let prevMonth = currentMonth - 1;
   let prevYear = currentYear;
-  
+
   if (prevMonth < 0) {
     prevMonth = 11;
     prevYear = currentYear - 1;
   }
 
-  const previousAdvance = advances.find(adv => 
-    adv.staffId === staffId && 
-    adv.month === prevMonth && 
+  const previousAdvance = advances.find(adv =>
+    adv.staffId === staffId &&
+    adv.month === prevMonth &&
     adv.year === prevYear
   );
 
@@ -191,7 +188,7 @@ export const calculateSalary = (
   currentYear: number
 ) => {
   const { totalPresentDays, sundayAbsents, daysInMonth, presentDays, halfDays, leaveDays } = attendanceMetrics;
-  
+
   let basicEarned: number;
   let incentiveEarned: number;
   let hraEarned: number;
@@ -219,29 +216,32 @@ export const calculateSalary = (
   // Calculate Sunday penalty - including half-day Sunday penalty
   let sundayPenalty = 0;
 
-  // Get Sunday half-day count from attendance
-  const monthlyAttendance = attendance.filter(record => {
-    const recordDate = new Date(record.date);
-    return record.staffId === staff.id && 
-           recordDate.getMonth() === currentMonth && 
-           recordDate.getFullYear() === currentYear &&
-           !record.isPartTime;
-  });
+  // Only apply penalty if enabled for this staff member (default to true)
+  if (staff.sundayPenalty !== false) {
+    // Get Sunday half-day count from attendance
+    const monthlyAttendance = attendance.filter(record => {
+      const recordDate = new Date(record.date);
+      return record.staffId === staff.id &&
+        recordDate.getMonth() === currentMonth &&
+        recordDate.getFullYear() === currentYear &&
+        !record.isPartTime;
+    });
 
-  const sundayHalfDays = monthlyAttendance
-    .filter(record => record.status === 'Half Day' && isSunday(record.date))
-    .length;
-     
-  // Calculate total Sunday penalty
-  if (sundayAbsents > 0) {
-    sundayPenalty += sundayAbsents * 500;
+    const sundayHalfDays = monthlyAttendance
+      .filter(record => record.status === 'Half Day' && isSunday(record.date))
+      .length;
+
+    // Calculate total Sunday penalty
+    if (sundayAbsents > 0) {
+      sundayPenalty += sundayAbsents * 500;
+    }
+
+    // Add Sunday half-day penalty (₹250 per half-day)
+    if (sundayHalfDays > 0) {
+      sundayPenalty += sundayHalfDays * 250;
+    }
   }
 
-  // Add Sunday half-day penalty (₹250 per half-day)
-  if (sundayHalfDays > 0) {
-    sundayPenalty += sundayHalfDays * 250;
-  }
-  
   // Gross salary calculation
   const grossSalary = roundToNearest10(basicEarned + incentiveEarned + hraEarned);
 
@@ -289,8 +289,8 @@ export const calculateLocationAttendance = (
   const locationAttendance = attendance.filter(record => {
     if (record.isPartTime) {
       // For part-time staff, check by location in attendance record
-      return record.date === date && 
-             attendance.find(a => a.id === record.id && a.staffName)?.location === location;
+      return record.date === date &&
+        attendance.find(a => a.id === record.id && a.staffName)?.location === location;
     } else {
       // For full-time staff, check by staff member location
       const staffMember = staff.find(s => s.id === record.staffId);
@@ -299,7 +299,7 @@ export const calculateLocationAttendance = (
   });
 
   // Get part-time attendance for this location and date
-  const partTimeAttendance = attendance.filter(record => 
+  const partTimeAttendance = attendance.filter(record =>
     record.isPartTime && record.date === date && record.status === 'Present'
   );
 
@@ -345,4 +345,21 @@ export const calculateLocationAttendance = (
     halfDayNames,
     absentNames
   };
+};
+
+// Calculate currency breakdown for an amount
+export const getCurrencyBreakdown = (amount: number): Record<number, number> => {
+  const denominations = [500, 200, 100, 50, 20, 10, 5, 2, 1];
+  const breakdown: Record<number, number> = {};
+  let remaining = amount;
+
+  denominations.forEach(denom => {
+    const count = Math.floor(remaining / denom);
+    if (count > 0) {
+      breakdown[denom] = count;
+      remaining -= count * denom;
+    }
+  });
+
+  return breakdown;
 };
