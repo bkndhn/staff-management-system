@@ -901,7 +901,7 @@ const PartTimeStaff: React.FC<PartTimeStaffProps> = ({
                                         const monthName = currentDate.toLocaleDateString('en-US', { month: 'short' });
 
                                         headers.push(
-                                            <th key={i} className="px-2 md:px-3 py-3 md:py-4 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                            <th key={i} className="w-16 min-w-[64px] px-1 py-3 md:py-4 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
                                                 <div>{dayNum}</div>
                                                 <div className="text-[10px] text-gray-400">{monthName}</div>
                                             </th>
@@ -947,6 +947,26 @@ const PartTimeStaff: React.FC<PartTimeStaffProps> = ({
                                             salary.weeklyBreakdown.flatMap(week => week.days).forEach(day => {
                                                 const dateKey = day.date; // Already in YYYY-MM-DD format
                                                 dailySalaries[dateKey] = day.salary;
+                                            });
+
+                                            // Generate 7 columns for the week
+                                            return Array.from({ length: 7 }, (_, i) => {
+                                                const currentDate = new Date(weekData.startDate);
+                                                currentDate.setDate(currentDate.getDate() + i);
+
+                                                // Create local date string manually to avoid timezone shifts
+                                                const year = currentDate.getFullYear();
+                                                const month = String(currentDate.getMonth() + 1).padStart(2, '0');
+                                                const day = String(currentDate.getDate()).padStart(2, '0');
+                                                const dateKey = `${year}-${month}-${day}`;
+
+                                                const salary = dailySalaries[dateKey];
+
+                                                return (
+                                                    <td key={i} className="w-16 min-w-[64px] px-1 py-4 text-center text-gray-900 font-semibold">
+                                                        {salary ? `₹${salary}` : '-'}
+                                                    </td>
+                                                );
                                             });
                                         })()}
                                         {reportType !== 'weekly' && (
@@ -995,9 +1015,12 @@ const PartTimeStaff: React.FC<PartTimeStaffProps> = ({
             {/* Currency Note Breakdown */}
             {partTimeSalaries.length > 0 && (
                 <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 md:p-6">
-                    <h3 className="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2">
-                        <DollarSign className="text-blue-600" size={20} />
-                        Currency Note Breakdown
+                    <h3 className="text-lg font-bold text-gray-800 mb-4 flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                            <DollarSign className="text-blue-600" size={20} />
+                            Currency Note Breakdown
+                        </div>
+                        <span className="text-green-600">Total: ₹{totalPartTimeEarnings}</span>
                     </h3>
                     <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
                         {sortedDenominations.map(denom => (
