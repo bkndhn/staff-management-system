@@ -422,24 +422,22 @@ const AttendanceTracker: React.FC<AttendanceTrackerProps> = ({
               </span>
             )}
           </div>
-          {userRole === 'admin' && (
-            <div className="header-actions flex gap-3">
-              <button
-                onClick={() => onBulkUpdateAttendance(selectedDate, 'Present')}
-                className="mobile-full-button flex items-center gap-2 px-3 md:px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm"
-              >
-                <Check size={16} />
-                All Present
-              </button>
-              <button
-                onClick={() => onBulkUpdateAttendance(selectedDate, 'Absent')}
-                className="mobile-full-button flex items-center gap-2 px-3 md:px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors text-sm"
-              >
-                <X size={16} />
-                All Absent
-              </button>
-            </div>
-          )}
+          <div className="header-actions flex gap-3">
+            <button
+              onClick={() => onBulkUpdateAttendance(selectedDate, 'Present')}
+              className="mobile-full-button flex items-center gap-2 px-3 md:px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm"
+            >
+              <Check size={16} />
+              All Present
+            </button>
+            <button
+              onClick={() => onBulkUpdateAttendance(selectedDate, 'Absent')}
+              className="mobile-full-button flex items-center gap-2 px-3 md:px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors text-sm"
+            >
+              <X size={16} />
+              All Absent
+            </button>
+          </div>
         </div>
 
         {/* Admin-only Search and Filters */}

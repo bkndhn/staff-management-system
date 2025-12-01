@@ -88,31 +88,60 @@ const PartTimeStaff: React.FC<PartTimeStaffProps> = ({
 
     const recentNames = getRecentNames();
 
-    // Get weeks in month (Monday to Sunday)
+    // Get weeks in month (simplified date-based: always 7-day weeks, can span into next month)
     const getWeeksInMonth = (year: number, month: number) => {
         const weeks = [];
-        const firstDay = new Date(year, month, 1);
-        const lastDay = new Date(year, month + 1, 0);
+        const lastDayOfMonth = new Date(year, month + 1, 0).getDate();
 
-        let currentWeekStart = new Date(firstDay);
-        // Find the Monday of the first week
-        while (currentWeekStart.getDay() !== 1) {
-            currentWeekStart.setDate(currentWeekStart.getDate() - 1);
-        }
+        let currentDay = 1;
 
-        while (currentWeekStart <= lastDay) {
-            const weekEnd = new Date(currentWeekStart);
-            weekEnd.setDate(weekEnd.getDate() + 6); // Sunday
-            weekEnd.setHours(23, 59, 59, 999); // Set to end of day
+        while (currentDay <= lastDayOfMonth) {
+            const weekStartDay = currentDay;
+            const weekEndDay = currentDay + 6; // Always 7 days
+
+            const startDate = new Date(year, month, weekStartDay);
+            let endDate: Date;
+            let endDay: number;
+            let endMonth: number;
+            let endYear: number;
+
+            if (weekEndDay <= lastDayOfMonth) {
+                // Week ends in current month
+                endDate = new Date(year, month, weekEndDay, 23, 59, 59, 999);
+                endDay = weekEndDay;
+                endMonth = month;
+                endYear = year;
+            } else {
+                // Week extends into next month
+                const daysIntoNextMonth = weekEndDay - lastDayOfMonth;
+                endMonth = month + 1;
+                endYear = year;
+
+                // Handle year boundary
+                if (endMonth > 11) {
+                    endMonth = 0;
+                    endYear = year + 1;
+                }
+
+                endDate = new Date(endYear, endMonth, daysIntoNextMonth, 23, 59, 59, 999);
+                endDay = daysIntoNextMonth;
+            }
 
             weeks.push({
-                start: currentWeekStart.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
-                end: weekEnd.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
-                startDate: new Date(currentWeekStart),
-                endDate: new Date(weekEnd)
+                start: startDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+                end: endDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+                startDate: startDate,
+                endDate: endDate,
+                startDay: weekStartDay,
+                endDay: weekEndDay, // Always +6 from start for column count
+                startMonth: month,
+                startYear: year,
+                endMonth: endMonth,
+                endYear: endYear,
+                actualEndDay: endDay
             });
 
-            currentWeekStart.setDate(currentWeekStart.getDate() + 7);
+            currentDay += 7;
         }
 
         return weeks;
@@ -786,19 +815,52 @@ const PartTimeStaff: React.FC<PartTimeStaffProps> = ({
                             <option value="dateRange">Date Range</option>
                         </select>
 
-                        {reportType === 'weekly' && (
-                            <select
-                                value={selectedWeek}
-                                onChange={(e) => setSelectedWeek(Number(e.target.value))}
-                                className="px-2 md:px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent text-sm"
-                            >
-                                {getWeeksInMonth(selectedYear, selectedMonth).map((week, index) => (
-                                    <option key={index} value={index}>
-                                        Week {index + 1}: {week.start} - {week.end}
-                                    </option>
-                                ))}
-                            </select>
-                        )}
+                        {reportType === 'weekly' && (() => {
+                            const weeks = getWeeksInMonth(selectedYear, selectedMonth);
+                            const selectedWeekData = weeks[selectedWeek];
+                            return (
+                                <div className="flex flex-wrap items-center gap-2">
+                                    <select
+                                        value={selectedMonth}
+                                        onChange={(e) => setSelectedMonth(Number(e.target.value))}
+                                        className="px-2 md:px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent text-sm"
+                                    >
+                                        {Array.from({ length: 12 }, (_, i) => (
+                                            <option key={i} value={i}>
+                                                {new Date(0, i).toLocaleString('default', { month: 'long' })}
+                                            </option>
+                                        ))}
+                                    </select>
+                                    <select
+                                        value={selectedYear}
+                                        onChange={(e) => setSelectedYear(Number(e.target.value))}
+                                        className="px-2 md:px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent text-sm"
+                                    >
+                                        {Array.from({ length: 5 }, (_, i) => (
+                                            <option key={i} value={new Date().getFullYear() - 2 + i}>
+                                                {new Date().getFullYear() - 2 + i}
+                                            </option>
+                                        ))}
+                                    </select>
+                                    <select
+                                        value={selectedWeek}
+                                        onChange={(e) => setSelectedWeek(Number(e.target.value))}
+                                        className="px-2 md:px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent text-sm"
+                                    >
+                                        {weeks.map((week, index) => (
+                                            <option key={index} value={index}>
+                                                Week {index + 1}: {week.start} - {week.end}
+                                            </option>
+                                        ))}
+                                    </select>
+                                    {selectedWeekData && (
+                                        <span className="px-3 py-1 bg-purple-100 text-purple-800 text-sm font-medium rounded-full">
+                                            Current Week: {selectedWeekData.start} - {selectedWeekData.end}
+                                        </span>
+                                    )}
+                                </div>
+                            );
+                        })()}
 
                         {reportType === 'dateRange' && (
                             <>
@@ -812,6 +874,7 @@ const PartTimeStaff: React.FC<PartTimeStaffProps> = ({
                                 <input
                                     type="date"
                                     value={dateRange.end}
+                                    min={dateRange.start}
                                     onChange={(e) => setDateRange({ ...dateRange, end: e.target.value })}
                                     className="px-2 md:px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent text-sm"
                                 />
@@ -825,17 +888,40 @@ const PartTimeStaff: React.FC<PartTimeStaffProps> = ({
                         <thead className="bg-gray-50">
                             <tr>
                                 <th className="px-3 md:px-6 py-3 md:py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">S.No</th>
-                                <th className="px-3 md:px-6 py-3 md:py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
+                                <th className="sticky left-0 z-10 bg-gray-50 px-3 md:px-6 py-3 md:py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]">Name</th>
                                 <th className="px-3 md:px-6 py-3 md:py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Location</th>
-                                <th className="px-3 md:px-6 py-3 md:py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Daily Attendance</th>
-                                <th className="px-3 md:px-6 py-3 md:py-4 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Weekly Breakdown</th>
-                                <th className="px-3 md:px-6 py-3 md:py-4 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Total Earnings</th>
+                                {reportType === 'weekly' && getWeeksInMonth(selectedYear, selectedMonth)[selectedWeek] && (() => {
+                                    const weekData = getWeeksInMonth(selectedYear, selectedMonth)[selectedWeek];
+                                    const headers = [];
+
+                                    for (let i = 0; i < 7; i++) {
+                                        const currentDate = new Date(weekData.startDate);
+                                        currentDate.setDate(currentDate.getDate() + i);
+                                        const dayNum = currentDate.getDate();
+                                        const monthName = currentDate.toLocaleDateString('en-US', { month: 'short' });
+
+                                        headers.push(
+                                            <th key={i} className="px-2 md:px-3 py-3 md:py-4 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                                <div>{dayNum}</div>
+                                                <div className="text-[10px] text-gray-400">{monthName}</div>
+                                            </th>
+                                        );
+                                    }
+                                    return headers;
+                                })()}
+                                {reportType !== 'weekly' && (
+                                    <>
+                                        <th className="px-3 md:px-6 py-3 md:py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Daily Attendance</th>
+                                        <th className="px-3 md:px-6 py-3 md:py-4 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Weekly Breakdown</th>
+                                    </>
+                                )}
+                                <th className="px-3 md:px-6 py-3 md:py-4 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Total</th>
                             </tr>
                         </thead>
                         <tbody className="bg-white divide-y divide-gray-200">
                             {partTimeSalaries.length === 0 ? (
                                 <tr>
-                                    <td colSpan={6} className="px-6 py-4 text-center text-gray-500">
+                                    <td colSpan={reportType === 'weekly' ? 11 : 6} className="px-6 py-4 text-center text-gray-500">
                                         No records found for the selected period
                                     </td>
                                 </tr>
@@ -843,7 +929,7 @@ const PartTimeStaff: React.FC<PartTimeStaffProps> = ({
                                 partTimeSalaries.map((salary, index) => (
                                     <tr key={`${salary.staffName}-${index}`} className="hover:bg-gray-50 text-xs md:text-sm">
                                         <td className="px-3 md:px-6 py-4 whitespace-nowrap text-gray-900">{index + 1}</td>
-                                        <td className="px-3 md:px-6 py-4 whitespace-nowrap font-medium text-gray-900">
+                                        <td className="sticky left-0 z-10 bg-white px-3 md:px-6 py-4 whitespace-nowrap font-medium text-gray-900 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]">
                                             {salary.staffName}
                                         </td>
                                         <td className="px-3 md:px-6 py-4 whitespace-nowrap">
@@ -851,28 +937,44 @@ const PartTimeStaff: React.FC<PartTimeStaffProps> = ({
                                                 {salary.location}
                                             </span>
                                         </td>
-                                        <td className="px-3 md:px-6 py-4 text-left text-gray-900">
-                                            <div className="flex flex-col gap-1">
-                                                {salary.weeklyBreakdown.flatMap(week => week.days).map((day, dayIndex) => (
-                                                    <div key={dayIndex} className="text-xs">
-                                                        {new Date(day.date).toLocaleDateString('en-GB', {
-                                                            day: '2-digit',
-                                                            month: '2-digit',
-                                                            year: '2-digit'
-                                                        })} - ₹{day.salary}
+                                        {reportType === 'weekly' && (() => {
+                                            const weekData = getWeeksInMonth(selectedYear, selectedMonth)[selectedWeek];
+                                            if (!weekData) return null;
+
+                                            const dailySalaries: Record<string, number> = {};
+
+                                            // Map all attendance to date strings (YYYY-MM-DD)
+                                            salary.weeklyBreakdown.flatMap(week => week.days).forEach(day => {
+                                                const dateKey = day.date; // Already in YYYY-MM-DD format
+                                                dailySalaries[dateKey] = day.salary;
+                                            });
+                                        })()}
+                                        {reportType !== 'weekly' && (
+                                            <>
+                                                <td className="px-3 md:px-6 py-4 text-left text-gray-900">
+                                                    <div className="flex flex-col gap-1">
+                                                        {salary.weeklyBreakdown.flatMap(week => week.days).map((day, dayIndex) => (
+                                                            <div key={dayIndex} className="text-xs">
+                                                                {new Date(day.date).toLocaleDateString('en-GB', {
+                                                                    day: '2-digit',
+                                                                    month: '2-digit',
+                                                                    year: '2-digit'
+                                                                })} - ₹{day.salary}
+                                                            </div>
+                                                        ))}
                                                     </div>
-                                                ))}
-                                            </div>
-                                        </td>
-                                        <td className="px-3 md:px-6 py-4 whitespace-nowrap text-center">
-                                            <div className="flex flex-col gap-1">
-                                                {salary.weeklyBreakdown.map((week, wIndex) => (
-                                                    <div key={wIndex} className="text-xs text-gray-500">
-                                                        Week {week.week}: ₹{week.weekTotal}
+                                                </td>
+                                                <td className="px-3 md:px-6 py-4 whitespace-nowrap text-center">
+                                                    <div className="flex flex-col gap-1">
+                                                        {salary.weeklyBreakdown.map((week, wIndex) => (
+                                                            <div key={wIndex} className="text-xs text-gray-500">
+                                                                Week {week.week}: ₹{week.weekTotal}
+                                                            </div>
+                                                        ))}
                                                     </div>
-                                                ))}
-                                            </div>
-                                        </td>
+                                                </td>
+                                            </>
+                                        )}
                                         <td className="px-3 md:px-6 py-4 whitespace-nowrap text-right font-bold text-green-600">
                                             ₹{salary.totalEarnings}
                                         </td>
@@ -882,7 +984,7 @@ const PartTimeStaff: React.FC<PartTimeStaffProps> = ({
                         </tbody>
                         <tfoot className="bg-gray-50 font-bold">
                             <tr>
-                                <td colSpan={5} className="px-3 md:px-6 py-4 text-right text-gray-900">Total Payout:</td>
+                                <td colSpan={reportType === 'weekly' ? (getWeeksInMonth(selectedYear, selectedMonth)[selectedWeek] ? 3 + (getWeeksInMonth(selectedYear, selectedMonth)[selectedWeek].endDay - getWeeksInMonth(selectedYear, selectedMonth)[selectedWeek].startDay + 1) : 10) : 5} className="px-3 md:px-6 py-4 text-right text-gray-900">Total Payout:</td>
                                 <td className="px-3 md:px-6 py-4 text-right text-green-600">₹{totalPartTimeEarnings}</td>
                             </tr>
                         </tfoot>
