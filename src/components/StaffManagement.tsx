@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Staff, OldStaffRecord, SalaryHike, SalaryCategory } from '../types';
-import { Users, Plus, Edit2, Trash2, Download, Archive, Calendar, TrendingUp, Settings, MapPin, DollarSign, Check, X } from 'lucide-react';
+import { Users, Plus, Edit2, Trash2, Download, Archive, Calendar, TrendingUp, Settings, MapPin, DollarSign, Check, X, Search } from 'lucide-react';
 import { calculateExperience } from '../utils/salaryCalculations';
 import SalaryHikeHistory from './SalaryHikeHistory';
 import { settingsService } from '../services/settingsService';
@@ -25,6 +25,7 @@ const StaffManagement: React.FC<StaffManagementProps> = ({
   const [showDeleteModal, setShowDeleteModal] = useState<Staff | null>(null);
   const [showSalaryHistory, setShowSalaryHistory] = useState<Staff | null>(null);
   const [deleteReason, setDeleteReason] = useState('');
+  const [searchQuery, setSearchQuery] = useState('');
 
   // Settings State
   const [showLocationManager, setShowLocationManager] = useState(false);
@@ -50,7 +51,14 @@ const StaffManagement: React.FC<StaffManagementProps> = ({
     salaryCalculationDays: 30
   });
 
-  const activeStaff = staff.filter(member => member.isActive);
+  const activeStaff = staff.filter(member => {
+    if (!member.isActive) return false;
+    const query = searchQuery.toLowerCase();
+    return (
+      member.name.toLowerCase().includes(query) ||
+      member.location.toLowerCase().includes(query)
+    );
+  });
 
   const resetForm = () => {
     setFormData({
@@ -170,33 +178,54 @@ const StaffManagement: React.FC<StaffManagementProps> = ({
   return (
     <div className="p-4 md:p-6 space-y-6">
       {/* Header */}
-      <div className="page-header flex items-center justify-between">
-        <h1 className="page-title text-2xl md:text-3xl font-bold text-gray-800 flex items-center gap-2">
+      {/* Header */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <h1 className="text-2xl md:text-3xl font-bold text-gray-800 flex items-center gap-2">
           <Users className="text-blue-600 md:w-8 md:h-8" size={24} />
           Staff Management
         </h1>
-        <div className="header-actions flex gap-3">
-          <button
-            onClick={() => setShowLocationManager(true)}
-            className="mobile-full-button flex items-center gap-2 px-3 md:px-4 py-2 bg-purple-100 text-purple-700 rounded-lg hover:bg-purple-200 transition-colors text-sm"
-          >
-            <MapPin size={16} />
-            Manage Locations
-          </button>
-          <button
-            onClick={() => setShowCategoryManager(true)}
-            className="mobile-full-button flex items-center gap-2 px-3 md:px-4 py-2 bg-green-100 text-green-700 rounded-lg hover:bg-green-200 transition-colors text-sm"
-          >
-            <DollarSign size={16} />
-            Salary Categories
-          </button>
-          <button
-            onClick={() => setShowAddForm(true)}
-            className="mobile-full-button flex items-center gap-2 px-3 md:px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm"
-          >
-            <Plus size={16} />
-            Add Staff
-          </button>
+
+        <div className="flex flex-col md:flex-row gap-4 flex-1 md:justify-end">
+          {/* Search Bar */}
+          <div className="relative flex-1 md:max-w-md">
+            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+              <Search className="text-gray-400" size={20} />
+            </div>
+            <input
+              type="text"
+              placeholder="Search by name or location..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            />
+          </div>
+
+          <div className="flex gap-2 overflow-x-auto pb-2 md:pb-0 no-scrollbar">
+            <button
+              onClick={() => setShowLocationManager(true)}
+              className="whitespace-nowrap flex items-center gap-2 px-3 md:px-4 py-2 bg-purple-100 text-purple-700 rounded-lg hover:bg-purple-200 transition-colors text-sm"
+            >
+              <MapPin size={16} />
+              <span className="hidden md:inline">Locations</span>
+              <span className="md:hidden">Loc</span>
+            </button>
+            <button
+              onClick={() => setShowCategoryManager(true)}
+              className="whitespace-nowrap flex items-center gap-2 px-3 md:px-4 py-2 bg-green-100 text-green-700 rounded-lg hover:bg-green-200 transition-colors text-sm"
+            >
+              <DollarSign size={16} />
+              <span className="hidden md:inline">Categories</span>
+              <span className="md:hidden">Cat</span>
+            </button>
+            <button
+              onClick={() => setShowAddForm(true)}
+              className="whitespace-nowrap flex items-center gap-2 px-3 md:px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm"
+            >
+              <Plus size={16} />
+              <span className="hidden md:inline">Add Staff</span>
+              <span className="md:hidden">Add</span>
+            </button>
+          </div>
         </div>
       </div>
 

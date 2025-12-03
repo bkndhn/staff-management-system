@@ -572,6 +572,7 @@ function App() {
             staff={filteredStaff}
             attendance={filteredAttendance}
             selectedDate={selectedDate}
+            onDateChange={setSelectedDate}
           />
         );
       case 'Staff Management':

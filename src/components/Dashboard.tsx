@@ -7,16 +7,16 @@ interface DashboardProps {
   staff: Staff[];
   attendance: Attendance[];
   selectedDate: string;
+  onDateChange: (date: string) => void;
 }
 
-const Dashboard: React.FC<DashboardProps> = ({ staff, attendance, selectedDate }) => {
-  const today = new Date().toISOString().split('T')[0];
-  const todayAttendance = attendance.filter(record => record.date === today);
-  
+const Dashboard: React.FC<DashboardProps> = ({ staff, attendance, selectedDate, onDateChange }) => {
+  const todayAttendance = attendance.filter(record => record.date === selectedDate);
+
   const activeStaff = staff.filter(member => member.isActive);
   const fullTimeStaff = activeStaff.filter(member => member.type === 'full-time');
   const partTimeStaff = activeStaff.filter(member => member.type === 'part-time');
-  
+
   // Full-time attendance
   const fullTimeAttendance = todayAttendance.filter(record => !record.isPartTime);
   const presentToday = fullTimeAttendance.filter(record => record.status === 'Present').length;
@@ -25,7 +25,7 @@ const Dashboard: React.FC<DashboardProps> = ({ staff, attendance, selectedDate }
 
   // Part-time attendance
   const partTimeAttendance = todayAttendance.filter(record => record.isPartTime && record.status === 'Present');
-  
+
   // Calculate part-time breakdown for top summary card
   const partTimeBoth = partTimeAttendance.filter(record => record.shift === 'Both').length;
   const partTimeMorning = partTimeAttendance.filter(record => record.shift === 'Morning').length;
@@ -36,20 +36,20 @@ const Dashboard: React.FC<DashboardProps> = ({ staff, attendance, selectedDate }
   const totalPresentValue = presentToday + halfDayToday;
 
   const locations = [
-    { 
-      name: 'Big Shop', 
-      color: 'bg-blue-100 text-blue-800', 
-      stats: calculateLocationAttendance(activeStaff, todayAttendance, today, 'Big Shop') 
+    {
+      name: 'Big Shop',
+      color: 'bg-blue-100 text-blue-800',
+      stats: calculateLocationAttendance(activeStaff, todayAttendance, selectedDate, 'Big Shop')
     },
-    { 
-      name: 'Small Shop', 
-      color: 'bg-green-100 text-green-800', 
-      stats: calculateLocationAttendance(activeStaff, todayAttendance, today, 'Small Shop') 
+    {
+      name: 'Small Shop',
+      color: 'bg-green-100 text-green-800',
+      stats: calculateLocationAttendance(activeStaff, todayAttendance, selectedDate, 'Small Shop')
     },
-    { 
-      name: 'Godown', 
-      color: 'bg-purple-100 text-purple-800', 
-      stats: calculateLocationAttendance(activeStaff, todayAttendance, today, 'Godown') 
+    {
+      name: 'Godown',
+      color: 'bg-purple-100 text-purple-800',
+      stats: calculateLocationAttendance(activeStaff, todayAttendance, selectedDate, 'Godown')
     }
   ];
 
@@ -58,37 +58,51 @@ const Dashboard: React.FC<DashboardProps> = ({ staff, attendance, selectedDate }
     if (isPartTime) {
       return shift ? `${staffName} (${shift})` : staffName;
     }
-    
+
     const staffMember = activeStaff.find(s => s.id === staffId);
     const attendanceRecord = todayAttendance.find(a => a.staffId === staffId && !a.isPartTime);
-    
+
     if (attendanceRecord?.status === 'Half Day' && attendanceRecord?.shift) {
       return `${staffMember?.name} (${attendanceRecord.shift})`;
     }
-    
+
     return staffMember?.name;
   };
 
   return (
     <div className="p-4 md:p-6 space-y-6">
       {/* Header */}
-      <div className="page-header flex items-center justify-between">
+      <div className="page-header flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
         <div>
           <h1 className="page-title text-2xl md:text-3xl font-bold text-gray-800 flex items-center gap-2">
             <Calendar className="text-blue-600" size={32} />
             Dashboard
           </h1>
         </div>
-        <div className="text-right">
-          <p className="text-sm text-gray-500">Today</p>
-          <p className="text-base md:text-lg font-semibold text-gray-800">
-            {new Date().toLocaleDateString('en-US', { 
-              weekday: 'long', 
-              year: 'numeric', 
-              month: 'long', 
-              day: 'numeric' 
-            })}
-          </p>
+        <div className="flex flex-col md:flex-row items-start md:items-end gap-3">
+          <div>
+            <label className="block text-sm text-gray-500 mb-1">Select Date</label>
+            <input
+              type="date"
+              value={selectedDate}
+              onChange={(e) => onDateChange(e.target.value)}
+              max={new Date().toISOString().split('T')[0]}
+              className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            />
+          </div>
+          <div className="text-left md:text-right">
+            <p className="text-sm text-gray-500">
+              {selectedDate === new Date().toISOString().split('T')[0] ? 'Today' : 'Selected Date'}
+            </p>
+            <p className="text-base md:text-lg font-semibold text-gray-800">
+              {new Date(selectedDate + 'T00:00:00').toLocaleDateString('en-US', {
+                weekday: 'long',
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric'
+              })}
+            </p>
+          </div>
         </div>
       </div>
 
@@ -168,11 +182,11 @@ const Dashboard: React.FC<DashboardProps> = ({ staff, attendance, selectedDate }
           <MapPin className="text-blue-600" size={20} />
           Today's Attendance by Location (Including Part-Time & Shifts)
         </h2>
-        
+
         <div className="space-y-6">
           {locations.map((location) => {
             // Calculate location-wise part-time breakdown
-            const locationPartTimeData = partTimeAttendance.filter(record => 
+            const locationPartTimeData = partTimeAttendance.filter(record =>
               record.location === location.name
             );
 
@@ -222,7 +236,7 @@ const Dashboard: React.FC<DashboardProps> = ({ staff, attendance, selectedDate }
                     </span>
                   )}
                 </h3>
-                
+
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                   <div className="bg-green-50 p-3 md:p-4 rounded-lg">
                     <p className="text-base md:text-lg font-bold text-green-600 mb-1">Present: {locationFullTimePresent.length}</p>
@@ -230,14 +244,14 @@ const Dashboard: React.FC<DashboardProps> = ({ staff, attendance, selectedDate }
                       {locationFullTimePresent.length > 0 ? locationFullTimePresent.join(', ') : 'None'}
                     </p>
                   </div>
-                  
+
                   <div className="bg-yellow-50 p-3 md:p-4 rounded-lg">
                     <p className="text-base md:text-lg font-bold text-yellow-600 mb-1">Half-day: {locationFullTimeHalfDay.length}</p>
                     <p className="text-sm text-gray-600">
                       {locationFullTimeHalfDay.length > 0 ? locationFullTimeHalfDay.join(', ') : 'None'}
                     </p>
                   </div>
-                  
+
                   <div className="bg-red-50 p-3 md:p-4 rounded-lg">
                     <p className="text-base md:text-lg font-bold text-red-600 mb-1">Absent: {locationFullTimeAbsent.length}</p>
                     <p className="text-sm text-gray-600">
@@ -250,7 +264,7 @@ const Dashboard: React.FC<DashboardProps> = ({ staff, attendance, selectedDate }
                       Part-Time: {locationPartTimeData.length} (Both: {locationBoth.length}, Morning: {locationMorning.length}, Evening: {locationEvening.length})
                     </p>
                     <p className="text-sm text-gray-600">
-                      {partTimeNames.length > 0 
+                      {partTimeNames.length > 0
                         ? partTimeNames.join(', ')
                         : 'None'
                       }
@@ -269,7 +283,7 @@ const Dashboard: React.FC<DashboardProps> = ({ staff, attendance, selectedDate }
           <TrendingUp className="text-blue-600" size={20} />
           Overall Organization Attendance
         </h2>
-        
+
         {(() => {
           // Calculate overall stats
           const overallPartTimeBoth = partTimeAttendance.filter(record => record.shift === 'Both');
@@ -304,7 +318,7 @@ const Dashboard: React.FC<DashboardProps> = ({ staff, attendance, selectedDate }
                   </span>
                 )}
               </h3>
-              
+
               <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                 <div className="bg-green-50 p-3 md:p-4 rounded-lg">
                   <p className="text-base md:text-lg font-bold text-green-600 mb-1">Present: {overallFullTimePresent.length}</p>
@@ -312,14 +326,14 @@ const Dashboard: React.FC<DashboardProps> = ({ staff, attendance, selectedDate }
                     {overallFullTimePresent.length > 0 ? overallFullTimePresent.join(', ') : 'None'}
                   </p>
                 </div>
-                
+
                 <div className="bg-yellow-50 p-3 md:p-4 rounded-lg">
                   <p className="text-base md:text-lg font-bold text-yellow-600 mb-1">Half-day: {overallFullTimeHalfDay.length}</p>
                   <p className="text-sm text-gray-600">
                     {overallFullTimeHalfDay.length > 0 ? overallFullTimeHalfDay.join(', ') : 'None'}
                   </p>
                 </div>
-                
+
                 <div className="bg-red-50 p-3 md:p-4 rounded-lg">
                   <p className="text-base md:text-lg font-bold text-red-600 mb-1">Absent: {overallFullTimeAbsent.length}</p>
                   <p className="text-sm text-gray-600">
@@ -332,7 +346,7 @@ const Dashboard: React.FC<DashboardProps> = ({ staff, attendance, selectedDate }
                     Part-Time: {partTimeAttendance.length} (Both: {overallPartTimeBoth.length}, Morning: {overallPartTimeMorning.length}, Evening: {overallPartTimeEvening.length})
                   </p>
                   <p className="text-sm text-gray-600">
-                    {overallPartTimeNames.length > 0 
+                    {overallPartTimeNames.length > 0
                       ? overallPartTimeNames.join(', ')
                       : 'None'
                     }
