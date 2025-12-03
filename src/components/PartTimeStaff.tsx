@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { Attendance, PartTimeSalaryDetail, Staff } from '../types';
 import { Clock, Plus, Download, Calendar, DollarSign, Edit2, Save, X, FileSpreadsheet, Trash2, Settings } from 'lucide-react';
 import { calculatePartTimeSalary, getPartTimeDailySalary, isSunday, getCurrencyBreakdown } from '../utils/salaryCalculations';
@@ -50,10 +50,27 @@ const PartTimeStaff: React.FC<PartTimeStaffProps> = ({
     const [locationFilter, setLocationFilter] = useState<'All' | 'Big Shop' | 'Small Shop' | 'Godown'>(
         userLocation ? userLocation as any : 'All'
     );
-    // Salary Report Filter: Defaults to 'All' for admins, otherwise defaults to user's location
-    const [reportLocationFilter, setReportLocationFilter] = useState<'All' | 'Big Shop' | 'Small Shop' | 'Godown'>(
-        userRole === 'admin' ? 'All' : (userLocation ? userLocation as any : 'All')
+    // Salary Report Filter: Defaults to ['All'] for admins, otherwise defaults to user's location in array
+    const [reportLocationFilter, setReportLocationFilter] = useState<string[]>(
+        userRole === 'admin' ? ['All'] : (userLocation ? [userLocation] : ['All'])
     );
+    const [showLocationDropdown, setShowLocationDropdown] = useState(false);
+    const dropdownRef = useRef<HTMLDivElement>(null);
+
+    // Close dropdown when clicking outside
+    useEffect(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+            if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+                setShowLocationDropdown(false);
+            }
+        };
+
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => {
+            document.removeEventListener('mousedown', handleClickOutside);
+        };
+    }, []);
+
     const [reportType, setReportType] = useState<'monthly' | 'weekly' | 'dateRange'>('weekly');
     const [selectedWeek, setSelectedWeek] = useState(0);
     const [dateRange, setDateRange] = useState({
@@ -285,9 +302,32 @@ const PartTimeStaff: React.FC<PartTimeStaffProps> = ({
         return partTimeNameDuplicate || fullTimeDuplicate;
     };
 
-    const partTimeSalaries = calculatePartTimeSalaries().filter(salary =>
-        reportLocationFilter === 'All' || salary.location === reportLocationFilter
-    );
+    // Helper functions for multi-location selection
+    const handleLocationToggle = (location: string) => {
+        if (location === 'All') {
+            setReportLocationFilter(['All']);
+        } else {
+            const newFilter = reportLocationFilter.includes('All')
+                ? [location]
+                : reportLocationFilter.includes(location)
+                    ? reportLocationFilter.filter(loc => loc !== location)
+                    : [...reportLocationFilter, location];
+
+            // If no locations selected, default to All
+            setReportLocationFilter(newFilter.length === 0 ? ['All'] : newFilter);
+        }
+    };
+
+    const getLocationButtonText = () => {
+        if (reportLocationFilter.includes('All')) return 'All Locations';
+        const count = reportLocationFilter.length;
+        return count === 1 ? reportLocationFilter[0] : `${count} Locations`;
+    };
+
+    const partTimeSalaries = calculatePartTimeSalaries().filter(salary => {
+        if (reportLocationFilter.includes('All')) return true;
+        return reportLocationFilter.some(loc => salary.location.includes(loc));
+    });
 
     // Filter salaries based on selection if any are selected
     const selectedSalaries = selectedStaff.size > 0
@@ -899,16 +939,43 @@ const PartTimeStaff: React.FC<PartTimeStaffProps> = ({
                         )}
                     </h2>
                     <div className="flex flex-wrap gap-2 md:gap-4">
-                        <select
-                            value={reportLocationFilter}
-                            onChange={(e) => setReportLocationFilter(e.target.value as any)}
-                            className="px-2 md:px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent text-sm"
-                        >
-                            <option value="All">All Locations</option>
-                            <option value="Big Shop">Big Shop</option>
-                            <option value="Small Shop">Small Shop</option>
-                            <option value="Godown">Godown</option>
-                        </select>
+                        {/* Multi-Location Filter Dropdown */}
+                        <div className="relative" ref={dropdownRef}>
+                            <button
+                                onClick={() => setShowLocationDropdown(!showLocationDropdown)}
+                                className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent text-sm bg-white hover:bg-gray-50 flex items-center gap-2"
+                            >
+                                {getLocationButtonText()}
+                                <span className="text-xs">▼</span>
+                            </button>
+                            {showLocationDropdown && (
+                                <div className="absolute top-full left-0 mt-1 bg-white border border-gray-300 rounded-lg shadow-lg z-50 min-w-[200px]">
+                                    <div className="p-2 space-y-1">
+                                        <label className="flex items-center gap-2 px-2 py-1.5 hover:bg-gray-50 rounded cursor-pointer">
+                                            <input
+                                                type="checkbox"
+                                                checked={reportLocationFilter.includes('All')}
+                                                onChange={() => handleLocationToggle('All')}
+                                                className="w-4 h-4 text-purple-600 rounded"
+                                            />
+                                            <span className="text-sm">All Locations</span>
+                                        </label>
+                                        <hr className="my-1" />
+                                        {['Big Shop', 'Small Shop', 'Godown'].map(location => (
+                                            <label key={location} className="flex items-center gap-2 px-2 py-1.5 hover:bg-gray-50 rounded cursor-pointer">
+                                                <input
+                                                    type="checkbox"
+                                                    checked={reportLocationFilter.includes(location)}
+                                                    onChange={() => handleLocationToggle(location)}
+                                                    className="w-4 h-4 text-purple-600 rounded"
+                                                />
+                                                <span className="text-sm">{location}</span>
+                                            </label>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+                        </div>
 
                         <select
                             value={reportType}
