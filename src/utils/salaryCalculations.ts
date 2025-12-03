@@ -1,4 +1,5 @@
 import { Staff, Attendance, SalaryDetail, AdvanceDeduction, PartTimeStaff, PartTimeSalaryDetail, WeeklySalary, DailySalary } from '../types';
+import { settingsService } from '../services/settingsService';
 
 // Round to nearest 10
 export const roundToNearest10 = (value: number): number => {
@@ -38,8 +39,9 @@ export const getPartTimeDailySalary = (date: string, isOverride: boolean = false
     return overrideAmount;
   }
 
+  const rates = settingsService.getPartTimeRates();
   const isSundayDate = isSunday(date);
-  return isSundayDate ? 400 : 350;
+  return isSundayDate ? rates.sundayRate : rates.weekdayRate;
 };
 
 // Calculate attendance values

@@ -144,7 +144,7 @@ function App() {
 
       return attendance.filter(record =>
         record.isPartTime
-          ? record.location === user.location
+          ? true // Allow all part-time staff for managers
           : locationStaffIds.includes(record.staffId)
       );
     }

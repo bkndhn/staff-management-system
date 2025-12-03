@@ -6,6 +6,11 @@ export interface SalaryCategory {
     key: string; // unique identifier for the field
 }
 
+export interface PartTimeRates {
+    weekdayRate: number;
+    sundayRate: number;
+}
+
 export interface StaffSalarySupplement {
     staffId: string;
     supplements: Record<string, number>; // key: amount
@@ -14,7 +19,8 @@ export interface StaffSalarySupplement {
 const STORAGE_KEYS = {
     LOCATIONS: 'staff_management_locations',
     SALARY_CATEGORIES: 'staff_management_salary_categories',
-    SALARY_SUPPLEMENTS: 'staff_management_salary_supplements'
+    SALARY_SUPPLEMENTS: 'staff_management_salary_supplements',
+    PART_TIME_RATES: 'staff_management_part_time_rates'
 };
 
 const DEFAULT_LOCATIONS = ['Big Shop', 'Small Shop', 'Godown'];
@@ -24,6 +30,11 @@ const DEFAULT_SALARY_CATEGORIES: SalaryCategory[] = [
     { id: 'incentive', name: 'Incentive', key: 'incentive' },
     { id: 'hra', name: 'HRA', key: 'hra' }
 ];
+
+const DEFAULT_PART_TIME_RATES: PartTimeRates = {
+    weekdayRate: 350,
+    sundayRate: 400
+};
 
 export const settingsService = {
     // Locations
@@ -130,5 +141,16 @@ export const settingsService = {
         const all = this.getStaffSupplements();
         const staffData = all.find(s => s.staffId === staffId);
         return staffData ? staffData.supplements : {};
+    },
+
+    // Part-Time Salary Rates
+    getPartTimeRates(): PartTimeRates {
+        const stored = localStorage.getItem(STORAGE_KEYS.PART_TIME_RATES);
+        return stored ? JSON.parse(stored) : DEFAULT_PART_TIME_RATES;
+    },
+
+    updatePartTimeRates(rates: PartTimeRates): PartTimeRates {
+        localStorage.setItem(STORAGE_KEYS.PART_TIME_RATES, JSON.stringify(rates));
+        return rates;
     }
 };

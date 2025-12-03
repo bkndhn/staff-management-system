@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
 import { Attendance, PartTimeSalaryDetail, Staff } from '../types';
-import { Clock, Plus, Download, Calendar, DollarSign, Edit2, Save, X, FileSpreadsheet, Trash2 } from 'lucide-react';
+import { Clock, Plus, Download, Calendar, DollarSign, Edit2, Save, X, FileSpreadsheet, Trash2, Settings } from 'lucide-react';
 import { calculatePartTimeSalary, getPartTimeDailySalary, isSunday, getCurrencyBreakdown } from '../utils/salaryCalculations';
 import { exportSalaryToExcel, exportSalaryPDF, exportPartTimeSalaryPDF } from '../utils/exportUtils';
+import { settingsService } from '../services/settingsService';
 
 interface PartTimeStaffProps {
     attendance: Attendance[];
@@ -10,6 +11,7 @@ interface PartTimeStaffProps {
     onUpdateAttendance: (staffId: string, date: string, status: 'Present' | 'Half Day' | 'Absent', isPartTime?: boolean, staffName?: string, shift?: 'Morning' | 'Evening' | 'Both', location?: string, salary?: number, salaryOverride?: boolean, arrivalTime?: string, leavingTime?: string) => void;
     onDeletePartTimeAttendance: (attendanceId: string) => void;
     userLocation?: string;
+    userRole?: string;
 }
 
 const PartTimeStaff: React.FC<PartTimeStaffProps> = ({
@@ -17,7 +19,8 @@ const PartTimeStaff: React.FC<PartTimeStaffProps> = ({
     staff,
     onUpdateAttendance,
     onDeletePartTimeAttendance,
-    userLocation
+    userLocation,
+    userRole
 }) => {
     const [selectedDate, setSelectedDate] = useState<string>(
         new Date().toISOString().split('T')[0]
@@ -47,19 +50,53 @@ const PartTimeStaff: React.FC<PartTimeStaffProps> = ({
     const [locationFilter, setLocationFilter] = useState<'All' | 'Big Shop' | 'Small Shop' | 'Godown'>(
         userLocation ? userLocation as any : 'All'
     );
+    // Salary Report Filter: Defaults to 'All' for admins, otherwise defaults to user's location
+    const [reportLocationFilter, setReportLocationFilter] = useState<'All' | 'Big Shop' | 'Small Shop' | 'Godown'>(
+        userRole === 'admin' ? 'All' : (userLocation ? userLocation as any : 'All')
+    );
     const [reportType, setReportType] = useState<'monthly' | 'weekly' | 'dateRange'>('weekly');
     const [selectedWeek, setSelectedWeek] = useState(0);
     const [dateRange, setDateRange] = useState({
         start: new Date().toISOString().split('T')[0],
         end: new Date().toISOString().split('T')[0]
     });
+    const [selectedStaff, setSelectedStaff] = useState<Set<string>>(new Set());
+
+    // Helper to toggle selection
+    const handleToggleStaffSelection = (staffId: string, location: string) => {
+        const key = `${staffId}-${location}`;
+        const newSelection = new Set(selectedStaff);
+        if (newSelection.has(key)) {
+            newSelection.delete(key);
+        } else {
+            newSelection.add(key);
+        }
+        setSelectedStaff(newSelection);
+    };
+
+    // Helper to select/deselect all in a group
+    const handleSelectAllInGroup = (groupStaff: PartTimeSalaryDetail[], shouldSelect: boolean) => {
+        const newSelection = new Set(selectedStaff);
+        groupStaff.forEach(staff => {
+            const key = `${staff.name}-${staff.location}`;
+            if (shouldSelect) {
+                newSelection.add(key);
+            } else {
+                newSelection.delete(key);
+            }
+        });
+        setSelectedStaff(newSelection);
+    };
     const [newStaffData, setNewStaffData] = useState({
         name: '',
         location: (userLocation || 'Big Shop') as 'Big Shop' | 'Small Shop' | 'Godown',
         shift: (new Date().getDay() === 0 ? 'Both' : 'Morning') as 'Morning' | 'Evening' | 'Both',
+        salary: 0,
         arrivalTime: '',
         leavingTime: ''
     });
+    const [showSettings, setShowSettings] = useState(false);
+    const [partTimeRates, setPartTimeRates] = useState(() => settingsService.getPartTimeRates());
 
     // Get recent names for smart suggestions
     const getRecentNames = () => {
@@ -195,26 +232,27 @@ const PartTimeStaff: React.FC<PartTimeStaffProps> = ({
             return false;
         });
 
-        // Filter by user location if manager
-        if (userLocation) {
-            monthlyAttendance = monthlyAttendance.filter(record => record.location === userLocation);
-        }
 
-        const uniqueStaff = new Map();
+
+        const uniqueStaff = new Map<string, { name: string; locations: Set<string> }>();
         monthlyAttendance.forEach(record => {
             if (record.staffName) {
-                const key = `${record.staffName}-${record.location}`;
-                uniqueStaff.set(key, {
-                    name: record.staffName,
-                    location: record.location || 'Unknown'
-                });
+                const key = record.staffName.toLowerCase();
+                if (!uniqueStaff.has(key)) {
+                    uniqueStaff.set(key, {
+                        name: record.staffName,
+                        locations: new Set([record.location || 'Unknown'])
+                    });
+                } else {
+                    uniqueStaff.get(key)!.locations.add(record.location || 'Unknown');
+                }
             }
         });
 
         return Array.from(uniqueStaff.values()).map(staff =>
             calculatePartTimeSalary(
                 staff.name,
-                staff.location,
+                Array.from(staff.locations).join(', '),
                 monthlyAttendance,
                 selectedYear,
                 selectedMonth
@@ -247,12 +285,20 @@ const PartTimeStaff: React.FC<PartTimeStaffProps> = ({
         return partTimeNameDuplicate || fullTimeDuplicate;
     };
 
-    const partTimeSalaries = calculatePartTimeSalaries();
+    const partTimeSalaries = calculatePartTimeSalaries().filter(salary =>
+        reportLocationFilter === 'All' || salary.location === reportLocationFilter
+    );
+
+    // Filter salaries based on selection if any are selected
+    const selectedSalaries = selectedStaff.size > 0
+        ? partTimeSalaries.filter(s => selectedStaff.has(`${s.staffName}-${s.location}`))
+        : partTimeSalaries;
+
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const totalPartTimeEarnings = partTimeSalaries.reduce((sum, salary) => sum + salary.totalEarnings, 0);
+    const totalPartTimeEarnings = selectedSalaries.reduce((sum, salary) => sum + salary.totalEarnings, 0);
 
     // Calculate currency breakdown
-    const currencyBreakdown = partTimeSalaries.reduce((acc, salary) => {
+    const currencyBreakdown = (selectedStaff.size > 0 ? selectedSalaries : partTimeSalaries).reduce((acc, salary) => {
         const breakdown = getCurrencyBreakdown(salary.totalEarnings);
         Object.entries(breakdown).forEach(([denom, count]) => {
             const d = Number(denom);
@@ -308,7 +354,11 @@ const PartTimeStaff: React.FC<PartTimeStaffProps> = ({
             defaultSalary = Math.round(defaultSalary / 2); // Half day rate
         }
 
-        // Set default arrival time to current time if not provided
+        // Use manual salary if provided, otherwise use calculated default
+        const finalSalary = newStaffData.salary > 0 ? newStaffData.salary : defaultSalary;
+        const isSalaryEdited = newStaffData.salary > 0 && newStaffData.salary !== defaultSalary;
+
+        // Set default arrival time to current time if not provided to current time if not provided
         const defaultArrivalTime = newStaffData.arrivalTime || new Date().toTimeString().slice(0, 5);
 
         // Set default leaving time based on shift
@@ -329,8 +379,8 @@ const PartTimeStaff: React.FC<PartTimeStaffProps> = ({
             newStaffData.name,
             newStaffData.shift,
             newStaffData.location,
-            defaultSalary,
-            false,
+            finalSalary,
+            isSalaryEdited,
             defaultArrivalTime,
             defaultLeavingTime
         );
@@ -338,6 +388,7 @@ const PartTimeStaff: React.FC<PartTimeStaffProps> = ({
             name: '',
             location: (userLocation || 'Big Shop') as any,
             shift: (new Date().getDay() === 0 ? 'Both' : 'Morning') as 'Morning' | 'Evening' | 'Both',
+            salary: 0,
             arrivalTime: '',
             leavingTime: ''
         });
@@ -375,6 +426,15 @@ const PartTimeStaff: React.FC<PartTimeStaffProps> = ({
             return;
         }
 
+        // Smart edited label logic: calculate default salary to check if it was actually edited
+        const defaultSalary = getPartTimeDailySalary(attendanceRecord.date);
+        const calculatedSalary = (editData.shift === 'Morning' || editData.shift === 'Evening')
+            ? Math.round(defaultSalary / 2)
+            : defaultSalary;
+
+        // Only mark as edited if salary actually changed from calculated default
+        const isSalaryEdited = editData.salary !== calculatedSalary;
+
         onUpdateAttendance(
             attendanceRecord.staffId,
             attendanceRecord.date,
@@ -384,7 +444,7 @@ const PartTimeStaff: React.FC<PartTimeStaffProps> = ({
             editData.shift as 'Morning' | 'Evening' | 'Both',
             editData.location,
             editData.salary,
-            true,
+            isSalaryEdited,
             editData.arrivalTime,
             editData.leavingTime
         );
@@ -430,8 +490,13 @@ const PartTimeStaff: React.FC<PartTimeStaffProps> = ({
             dateRangeData = dateRange;
         }
 
+        // Export only selected salaries if any are selected
+        const salariesToExport = selectedStaff.size > 0
+            ? partTimeSalaries.filter(s => selectedStaff.has(`${s.staffName}-${s.location}`))
+            : partTimeSalaries;
+
         exportPartTimeSalaryPDF(
-            partTimeSalaries,
+            salariesToExport,
             selectedMonth,
             selectedYear,
             reportType,
@@ -487,6 +552,13 @@ const PartTimeStaff: React.FC<PartTimeStaffProps> = ({
                             <Download size={16} />
                             <span className="hidden sm:inline">Export PDF</span>
                             <span className="sm:hidden">PDF</span>
+                        </button>
+                        <button
+                            onClick={() => setShowSettings(true)}
+                            className="flex items-center gap-2 px-3 md:px-4 py-2 bg-white/20 text-white rounded-lg hover:bg-white/30 transition-colors text-sm"
+                        >
+                            <Settings size={16} />
+                            <span className="hidden sm:inline">Settings</span>
                         </button>
                         <button
                             onClick={() => setShowAddForm(true)}
@@ -545,6 +617,28 @@ const PartTimeStaff: React.FC<PartTimeStaffProps> = ({
                                 <option value="Evening">Evening (Half Day)</option>
                                 <option value="Both">Both (Full Day)</option>
                             </select>
+                        </div>
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">Salary (Optional)</label>
+                            <div className="relative">
+                                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                    <span className="text-gray-500 sm:text-sm">₹</span>
+                                </div>
+                                <input
+                                    type="number"
+                                    value={newStaffData.salary || ''}
+                                    onChange={(e) => setNewStaffData({ ...newStaffData, salary: Number(e.target.value) })}
+                                    placeholder={(() => {
+                                        let defaultSalary = getPartTimeDailySalary(selectedDate);
+                                        if (newStaffData.shift === 'Morning' || newStaffData.shift === 'Evening') {
+                                            defaultSalary = Math.round(defaultSalary / 2);
+                                        }
+                                        return `Auto: ₹${defaultSalary}`;
+                                    })()}
+                                    className="w-full pl-7 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                                />
+                            </div>
+                            <p className="mt-1 text-xs text-gray-500">Leave empty to use auto-calculated salary</p>
                         </div>
                         <div className="md:col-span-2 lg:col-span-1">
                             <label className="block text-sm font-medium text-gray-700 mb-1">Arrival Time</label>
@@ -806,6 +900,17 @@ const PartTimeStaff: React.FC<PartTimeStaffProps> = ({
                     </h2>
                     <div className="flex flex-wrap gap-2 md:gap-4">
                         <select
+                            value={reportLocationFilter}
+                            onChange={(e) => setReportLocationFilter(e.target.value as any)}
+                            className="px-2 md:px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent text-sm"
+                        >
+                            <option value="All">All Locations</option>
+                            <option value="Big Shop">Big Shop</option>
+                            <option value="Small Shop">Small Shop</option>
+                            <option value="Godown">Godown</option>
+                        </select>
+
+                        <select
                             value={reportType}
                             onChange={(e) => setReportType(e.target.value as 'monthly' | 'weekly' | 'dateRange')}
                             className="px-2 md:px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent text-sm"
@@ -887,6 +992,25 @@ const PartTimeStaff: React.FC<PartTimeStaffProps> = ({
                     <table className="w-full">
                         <thead className="bg-gray-50">
                             <tr>
+                                <th className="px-3 md:px-6 py-3 md:py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    <div className="flex items-center gap-2">
+                                        <input
+                                            type="checkbox"
+                                            className="rounded border-gray-300 text-purple-600 focus:ring-purple-500"
+                                            checked={selectedStaff.size > 0 && partTimeSalaries.every(s => selectedStaff.has(`${s.staffName}-${s.location}`))}
+                                            onChange={(e) => {
+                                                if (e.target.checked) {
+                                                    const newSelection = new Set<string>();
+                                                    partTimeSalaries.forEach(s => newSelection.add(`${s.staffName}-${s.location}`));
+                                                    setSelectedStaff(newSelection);
+                                                } else {
+                                                    setSelectedStaff(new Set());
+                                                }
+                                            }}
+                                        />
+                                        <span>Select</span>
+                                    </div>
+                                </th>
                                 <th className="px-3 md:px-6 py-3 md:py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">S.No</th>
                                 <th className="sticky left-0 z-10 bg-gray-50 px-3 md:px-6 py-3 md:py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]">Name</th>
                                 <th className="px-3 md:px-6 py-3 md:py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Location</th>
@@ -921,13 +1045,30 @@ const PartTimeStaff: React.FC<PartTimeStaffProps> = ({
                         <tbody className="bg-white divide-y divide-gray-200">
                             {partTimeSalaries.length === 0 ? (
                                 <tr>
-                                    <td colSpan={reportType === 'weekly' ? 11 : 6} className="px-6 py-4 text-center text-gray-500">
+                                    <td colSpan={reportType === 'weekly' ? 12 : 7} className="px-6 py-4 text-center text-gray-500">
                                         No records found for the selected period
                                     </td>
                                 </tr>
                             ) : (
                                 partTimeSalaries.map((salary, index) => (
                                     <tr key={`${salary.staffName}-${index}`} className="hover:bg-gray-50 text-xs md:text-sm">
+                                        <td className="px-3 md:px-6 py-4 whitespace-nowrap">
+                                            <input
+                                                type="checkbox"
+                                                checked={selectedStaff.has(`${salary.staffName}-${salary.location}`)}
+                                                onChange={(e) => {
+                                                    const newSelection = new Set(selectedStaff);
+                                                    const key = `${salary.staffName}-${salary.location}`;
+                                                    if (e.target.checked) {
+                                                        newSelection.add(key);
+                                                    } else {
+                                                        newSelection.delete(key);
+                                                    }
+                                                    setSelectedStaff(newSelection);
+                                                }}
+                                                className="rounded border-gray-300 text-purple-600 focus:ring-purple-500"
+                                            />
+                                        </td>
                                         <td className="px-3 md:px-6 py-4 whitespace-nowrap text-gray-900">{index + 1}</td>
                                         <td className="sticky left-0 z-10 bg-white px-3 md:px-6 py-4 whitespace-nowrap font-medium text-gray-900 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]">
                                             {salary.staffName}
@@ -1056,8 +1197,111 @@ const PartTimeStaff: React.FC<PartTimeStaffProps> = ({
                     </div>
                 </div>
             )}
+
+            {/* Settings Modal */}
+            {showSettings && (
+                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+                    <div className="bg-white rounded-lg p-6 max-w-md w-full">
+                        <div className="flex items-center justify-between mb-4">
+                            <h3 className="text-lg font-bold text-gray-900">Part-Time Salary Rates</h3>
+                            <button
+                                onClick={() => {
+                                    setShowSettings(false);
+                                    setPartTimeRates(settingsService.getPartTimeRates()); // Reset
+                                }}
+                                className="text-gray-400 hover:text-gray-600"
+                            >
+                                <X size={20} />
+                            </button>
+                        </div>
+
+                        <div className="space-y-4">
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">
+                                    Weekday Rate (₹)
+                                </label>
+                                <div className="relative">
+                                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                        <span className="text-gray-500 sm:text-sm">₹</span>
+                                    </div>
+                                    <input
+                                        type="number"
+                                        value={partTimeRates.weekdayRate}
+                                        onChange={(e) => setPartTimeRates({
+                                            ...partTimeRates,
+                                            weekdayRate: Number(e.target.value)
+                                        })}
+                                        className="w-full pl-7 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                                    />
+                                </div>
+                                <p className="mt-1 text-xs text-gray-500">Base rate for Monday to Saturday</p>
+                            </div>
+
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">
+                                    Sunday Rate (₹)
+                                </label>
+                                <div className="relative">
+                                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                        <span className="text-gray-500 sm:text-sm">₹</span>
+                                    </div>
+                                    <input
+                                        type="number"
+                                        value={partTimeRates.sundayRate}
+                                        onChange={(e) => setPartTimeRates({
+                                            ...partTimeRates,
+                                            sundayRate: Number(e.target.value)
+                                        })}
+                                        className="w-full pl-7 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                                    />
+                                </div>
+                                <p className="mt-1 text-xs text-gray-500">Special rate for Sundays</p>
+                            </div>
+
+                            <div className="bg-blue-50 p-3 rounded-lg flex items-start gap-2">
+                                <Clock className="text-blue-600 mt-0.5 flex-shrink-0" size={16} />
+                                <div className="text-xs text-blue-700">
+                                    <p className="font-medium">Note:</p>
+                                    <ul className="list-disc list-inside mt-1 space-y-0.5">
+                                        <li>Morning/Evening shifts earn 50% of these rates</li>
+                                        <li>Changes apply to all future auto-calculations</li>
+                                        <li>Existing manual overrides are preserved</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="flex justify-end gap-3 mt-6">
+                            <button
+                                onClick={() => {
+                                    setShowSettings(false);
+                                    setPartTimeRates(settingsService.getPartTimeRates()); // Reset
+                                }}
+                                className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                onClick={() => {
+                                    settingsService.updatePartTimeRates(partTimeRates);
+                                    setShowSettings(false);
+                                    // Force re-render to update calculated salaries
+                                    window.location.reload();
+                                }}
+                                className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors flex items-center gap-2"
+                            >
+                                <Save size={16} />
+                                Save Changes
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
+
+
 };
 
 export default PartTimeStaff;
+
