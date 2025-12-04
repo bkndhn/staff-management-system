@@ -549,6 +549,21 @@ function App() {
     }
   };
 
+  // Update staff order (drag and drop reordering)
+  const handleUpdateStaffOrder = async (newOrder: Staff[]) => {
+    // Optimistic update
+    setStaff(newOrder);
+
+    try {
+      await staffService.updateStaffOrder(newOrder.map(s => s.id));
+    } catch (error) {
+      console.error('Error updating staff order:', error);
+      // Revert on error by reloading data
+      loadAllData();
+      alert('Failed to save staff order. Please try again.');
+    }
+  };
+
   const renderContent = () => {
     if (loading) {
       return (
@@ -584,6 +599,7 @@ function App() {
             onAddStaff={addStaff}
             onUpdateStaff={updateStaff}
             onDeleteStaff={deleteStaff}
+            onUpdateStaffOrder={handleUpdateStaffOrder}
           />
         );
       case 'Attendance':

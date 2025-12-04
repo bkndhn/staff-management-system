@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Staff, OldStaffRecord, SalaryHike, SalaryCategory } from '../types';
-import { Users, Plus, Edit2, Trash2, Download, Archive, Calendar, TrendingUp, Settings, MapPin, DollarSign, Check, X, Search } from 'lucide-react';
+import { Users, Plus, Edit2, Trash2, Download, Archive, Calendar, TrendingUp, Settings, MapPin, DollarSign, Check, X, Search, GripVertical } from 'lucide-react';
 import { calculateExperience } from '../utils/salaryCalculations';
 import SalaryHikeHistory from './SalaryHikeHistory';
 import { settingsService } from '../services/settingsService';
@@ -11,6 +11,7 @@ interface StaffManagementProps {
   onAddStaff: (staff: Omit<Staff, 'id'>) => void;
   onUpdateStaff: (id: string, staff: Partial<Staff>) => void;
   onDeleteStaff: (id: string, reason: string) => void;
+  onUpdateStaffOrder?: (newOrder: Staff[]) => void;
 }
 
 const StaffManagement: React.FC<StaffManagementProps> = ({
@@ -18,7 +19,8 @@ const StaffManagement: React.FC<StaffManagementProps> = ({
   salaryHikes,
   onAddStaff,
   onUpdateStaff,
-  onDeleteStaff
+  onDeleteStaff,
+  onUpdateStaffOrder
 }) => {
   const [showAddForm, setShowAddForm] = useState(false);
   const [editingStaff, setEditingStaff] = useState<Staff | null>(null);
@@ -26,6 +28,10 @@ const StaffManagement: React.FC<StaffManagementProps> = ({
   const [showSalaryHistory, setShowSalaryHistory] = useState<Staff | null>(null);
   const [deleteReason, setDeleteReason] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
+
+  // Drag and drop state
+  const [draggedItem, setDraggedItem] = useState<Staff | null>(null);
+  const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
 
   // Settings State
   const [showLocationManager, setShowLocationManager] = useState(false);
@@ -59,6 +65,62 @@ const StaffManagement: React.FC<StaffManagementProps> = ({
       member.location.toLowerCase().includes(query)
     );
   });
+
+  // Drag and drop handlers
+  const handleDragStart = (e: React.DragEvent, member: Staff) => {
+    setDraggedItem(member);
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('text/plain', member.id);
+    // Add visual feedback
+    if (e.currentTarget instanceof HTMLElement) {
+      e.currentTarget.style.opacity = '0.5';
+    }
+  };
+
+  const handleDragEnd = (e: React.DragEvent) => {
+    setDraggedItem(null);
+    setDragOverIndex(null);
+    if (e.currentTarget instanceof HTMLElement) {
+      e.currentTarget.style.opacity = '1';
+    }
+  };
+
+  const handleDragOver = (e: React.DragEvent, index: number) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    setDragOverIndex(index);
+  };
+
+  const handleDragLeave = () => {
+    setDragOverIndex(null);
+  };
+
+  const handleDrop = (e: React.DragEvent, dropIndex: number) => {
+    e.preventDefault();
+
+    if (!draggedItem || !onUpdateStaffOrder) return;
+
+    const dragIndex = activeStaff.findIndex(s => s.id === draggedItem.id);
+    if (dragIndex === -1 || dragIndex === dropIndex) {
+      setDraggedItem(null);
+      setDragOverIndex(null);
+      return;
+    }
+
+    // Create new order
+    const newOrder = [...activeStaff];
+    const [removed] = newOrder.splice(dragIndex, 1);
+    newOrder.splice(dropIndex, 0, removed);
+
+    // Include inactive staff at the end for the full staff array
+    const inactiveStaff = staff.filter(s => !s.isActive);
+    const fullNewOrder = [...newOrder, ...inactiveStaff];
+
+    onUpdateStaffOrder(fullNewOrder);
+
+    setDraggedItem(null);
+    setDragOverIndex(null);
+  };
 
   const resetForm = () => {
     setFormData({
@@ -98,96 +160,75 @@ const StaffManagement: React.FC<StaffManagementProps> = ({
       // For new staff, we'll need the ID to save supplements, but we don't have it yet.
       // In a real app, we'd wait for the ID. Here we'll handle it after creation if possible,
       // or just pass it along if the API supported it.
-      // Since we can't easily get the ID back synchronously from the parent in this flow without changing props,
-      // we will rely on the parent or just save it with a temporary ID if needed, but better to just
-      // let the user update it later or assume the parent handles it. 
-      // ACTUALLY: The best way here is to pass supplements to onAddStaff if we updated the type,
-      // but we only updated the type in index.ts.
-      // Let's assume onAddStaff handles it or we update the service to accept it.
-      // For now, we will just pass it in the staff object since we updated the type.
-
       onAddStaff({
         ...formData,
         totalSalary,
-        experience,
         type: 'full-time',
         isActive: true,
-        initialSalary: totalSalary,
-        salarySupplements: formData.salarySupplements,
-        sundayPenalty: formData.sundayPenalty
+        experience
       });
-      setShowAddForm(false);
     }
+
     resetForm();
+    setShowAddForm(false);
   };
 
-  const handleEdit = (staffMember: Staff) => {
-    setEditingStaff(staffMember);
-    const supplements = settingsService.getStaffSupplement(staffMember.id);
+  const handleEdit = (member: Staff) => {
+    const supplements = settingsService.getStaffSupplement(member.id);
     setFormData({
-      name: staffMember.name,
-      location: staffMember.location,
-      basicSalary: staffMember.basicSalary,
-      incentive: staffMember.incentive,
-      hra: staffMember.hra,
-      joinedDate: staffMember.joinedDate,
+      name: member.name,
+      location: member.location,
+      basicSalary: member.basicSalary,
+      incentive: member.incentive,
+      hra: member.hra,
+      joinedDate: member.joinedDate,
       salarySupplements: supplements,
-      sundayPenalty: staffMember.sundayPenalty ?? true,
-      salaryCalculationDays: staffMember.salaryCalculationDays || 30
+      sundayPenalty: member.sundayPenalty ?? true,
+      salaryCalculationDays: member.salaryCalculationDays || 30
     });
-
-    // Auto-scroll to the form at the top
-    setTimeout(() => {
-      const formElement = document.querySelector('.edit-staff-form');
-      if (formElement) {
-        formElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      }
-    }, 100);
+    setEditingStaff(member);
+    setShowAddForm(true);
   };
 
-  const handleDelete = (staffMember: Staff) => {
-    setShowDeleteModal(staffMember);
+  const handleDelete = (member: Staff) => {
+    setShowDeleteModal(member);
     setDeleteReason('');
   };
 
   const confirmDelete = () => {
     if (showDeleteModal && deleteReason.trim()) {
-      onDeleteStaff(showDeleteModal.id, deleteReason);
+      onDeleteStaff(showDeleteModal.id, deleteReason.trim());
       setShowDeleteModal(null);
       setDeleteReason('');
     }
   };
 
-  const getLocationColor = (location: string) => {
-    switch (location) {
-      case 'Big Shop':
-        return 'bg-blue-100 text-blue-800';
-      case 'Small Shop':
-        return 'bg-green-100 text-green-800';
-      case 'Godown':
-        return 'bg-purple-100 text-purple-800';
-      default:
-        return 'bg-gray-100 text-gray-800';
-    }
+  const getLocationColor = (location: string): string => {
+    const colors: Record<string, string> = {
+      'Big Shop': 'bg-blue-100 text-blue-800',
+      'Small Shop': 'bg-green-100 text-green-800',
+      'Godown': 'bg-purple-100 text-purple-800'
+    };
+    return colors[location] || 'bg-gray-100 text-gray-800';
   };
 
   const getStaffSalaryHikes = (staffId: string) => {
-    return salaryHikes.filter(hike => hike.staffId === staffId);
+    return salaryHikes
+      .filter(hike => hike.staffId === staffId)
+      .sort((a, b) => new Date(b.hikeDate).getTime() - new Date(a.hikeDate).getTime());
   };
 
   return (
     <div className="p-4 md:p-6 space-y-6">
       {/* Header */}
-      {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <h1 className="text-2xl md:text-3xl font-bold text-gray-800 flex items-center gap-2">
-          <Users className="text-blue-600 md:w-8 md:h-8" size={24} />
+          <Users className="text-blue-600" size={32} />
           Staff Management
         </h1>
-
-        <div className="flex flex-col md:flex-row gap-4 flex-1 md:justify-end">
+        <div className="flex flex-col sm:flex-row gap-3 w-full md:w-auto">
           {/* Search Bar */}
-          <div className="relative flex-1 md:max-w-md">
+          <div className="relative flex-1 sm:min-w-[200px] md:min-w-[300px]">
             <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
               <Search className="text-gray-400" size={20} />
             </div>
@@ -199,43 +240,45 @@ const StaffManagement: React.FC<StaffManagementProps> = ({
               className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             />
           </div>
-
-          <div className="flex gap-2 overflow-x-auto pb-2 md:pb-0 no-scrollbar">
+          <div className="flex gap-2">
             <button
               onClick={() => setShowLocationManager(true)}
-              className="whitespace-nowrap flex items-center gap-2 px-3 md:px-4 py-2 bg-purple-100 text-purple-700 rounded-lg hover:bg-purple-200 transition-colors text-sm"
+              className="flex items-center gap-2 px-3 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors text-sm"
+              title="Manage Locations"
             >
               <MapPin size={16} />
-              <span className="hidden md:inline">Locations</span>
-              <span className="md:hidden">Loc</span>
+              <span className="hidden sm:inline">Locations</span>
             </button>
             <button
               onClick={() => setShowCategoryManager(true)}
-              className="whitespace-nowrap flex items-center gap-2 px-3 md:px-4 py-2 bg-green-100 text-green-700 rounded-lg hover:bg-green-200 transition-colors text-sm"
+              className="flex items-center gap-2 px-3 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm"
+              title="Manage Salary Categories"
             >
               <DollarSign size={16} />
-              <span className="hidden md:inline">Categories</span>
-              <span className="md:hidden">Cat</span>
+              <span className="hidden sm:inline">Categories</span>
             </button>
             <button
-              onClick={() => setShowAddForm(true)}
-              className="whitespace-nowrap flex items-center gap-2 px-3 md:px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm"
+              onClick={() => {
+                resetForm();
+                setEditingStaff(null);
+                setShowAddForm(!showAddForm);
+              }}
+              className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
             >
-              <Plus size={16} />
-              <span className="hidden md:inline">Add Staff</span>
-              <span className="md:hidden">Add</span>
+              <Plus size={20} />
+              <span className="hidden sm:inline">Add Staff</span>
             </button>
           </div>
         </div>
       </div>
 
-      {/* Add/Edit Form */}
-      {(showAddForm || editingStaff) && (
-        <div className="edit-staff-form bg-white rounded-xl shadow-sm border border-gray-100 p-4 md:p-6">
-          <h2 className="text-lg md:text-xl font-bold text-gray-800 mb-4">
+      {/* Add/Edit Staff Form */}
+      {showAddForm && (
+        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+          <h2 className="text-lg font-semibold text-gray-800 mb-4">
             {editingStaff ? 'Edit Staff Member' : 'Add New Staff Member'}
           </h2>
-          <form onSubmit={handleSubmit} className="form-grid grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Name</label>
               <input
@@ -350,9 +393,9 @@ const StaffManagement: React.FC<StaffManagementProps> = ({
               <button
                 type="button"
                 onClick={() => {
-                  setShowAddForm(false);
-                  setEditingStaff(null);
                   resetForm();
+                  setEditingStaff(null);
+                  setShowAddForm(false);
                 }}
                 className="mobile-full-button px-6 py-2 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400 transition-colors"
               >
@@ -373,10 +416,10 @@ const StaffManagement: React.FC<StaffManagementProps> = ({
             </h3>
             <p className="text-gray-600 mb-4">
               Are you sure you want to archive <strong>{showDeleteModal.name}</strong>?
-              This will move them to Old Staff Records.
+              They will be moved to the Old Staff Records.
             </p>
             <div className="mb-4">
-              <label className="block text-sm font-medium text-gray-700 mb-1">Reason for leaving</label>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Reason for archiving *</label>
               <textarea
                 value={deleteReason}
                 onChange={(e) => setDeleteReason(e.target.value)}
@@ -443,15 +486,22 @@ const StaffManagement: React.FC<StaffManagementProps> = ({
 
       {/* Staff Table */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-        <div className="p-4 border-b border-gray-200">
+        <div className="p-4 border-b border-gray-200 flex items-center justify-between">
           <h2 className="text-lg font-semibold text-gray-800">
             Active Staff ({activeStaff.length})
           </h2>
+          {onUpdateStaffOrder && (
+            <span className="text-xs text-gray-500 flex items-center gap-1">
+              <GripVertical size={14} />
+              Drag rows to reorder
+            </span>
+          )}
         </div>
         <div className="table-container overflow-x-auto">
           <table className="w-full">
             <thead className="bg-gray-50">
               <tr>
+                <th className="px-2 md:px-3 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-10"></th>
                 <th className="px-3 md:px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">S.No</th>
                 <th className="px-3 md:px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider sticky left-0 z-10 bg-gray-50">Name</th>
                 <th className="px-3 md:px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Location</th>
@@ -468,9 +518,27 @@ const StaffManagement: React.FC<StaffManagementProps> = ({
               {activeStaff.map((member, index) => {
                 const memberHikes = getStaffSalaryHikes(member.id);
                 const hasHikes = memberHikes.length > 0;
+                const isDragOver = dragOverIndex === index;
+                const isDragging = draggedItem?.id === member.id;
 
                 return (
-                  <tr key={member.id} className="hover:bg-gray-50">
+                  <tr
+                    key={member.id}
+                    className={`hover:bg-gray-50 ${isDragOver ? 'bg-blue-50 border-blue-300' : ''} ${isDragging ? 'opacity-50' : ''}`}
+                    draggable={!!onUpdateStaffOrder}
+                    onDragStart={(e) => handleDragStart(e, member)}
+                    onDragEnd={handleDragEnd}
+                    onDragOver={(e) => handleDragOver(e, index)}
+                    onDragLeave={handleDragLeave}
+                    onDrop={(e) => handleDrop(e, index)}
+                  >
+                    <td className="px-2 md:px-3 py-4 whitespace-nowrap">
+                      {onUpdateStaffOrder && (
+                        <div className="cursor-grab active:cursor-grabbing text-gray-400 hover:text-gray-600">
+                          <GripVertical size={16} />
+                        </div>
+                      )}
+                    </td>
                     <td className="px-3 md:px-6 py-4 whitespace-nowrap text-sm text-gray-900">{index + 1}</td>
                     <td className="px-3 md:px-6 py-4 whitespace-nowrap sticky left-0 z-10 bg-white">
                       <div>
@@ -610,17 +678,15 @@ const StaffManagement: React.FC<StaffManagementProps> = ({
                           >
                             <Edit2 size={16} />
                           </button>
-                          {!['Big Shop', 'Small Shop', 'Godown'].includes(loc) && (
-                            <button
-                              onClick={() => {
-                                const updated = settingsService.deleteLocation(loc);
-                                setLocations(updated);
-                              }}
-                              className="text-red-500 hover:text-red-700"
-                            >
-                              <Trash2 size={16} />
-                            </button>
-                          )}
+                          <button
+                            onClick={() => {
+                              const updated = settingsService.deleteLocation(loc);
+                              setLocations(updated);
+                            }}
+                            className="text-red-500 hover:text-red-700"
+                          >
+                            <Trash2 size={16} />
+                          </button>
                         </div>
                       </>
                     )}
@@ -641,7 +707,7 @@ const StaffManagement: React.FC<StaffManagementProps> = ({
         )
       }
 
-      {/* Salary Category Manager Modal */}
+      {/* Category Manager Modal */}
       {
         showCategoryManager && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">

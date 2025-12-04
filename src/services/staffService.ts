@@ -7,6 +7,7 @@ export const staffService = {
     const { data, error } = await supabase
       .from('staff')
       .select('*')
+      .order('display_order', { ascending: true, nullsFirst: false })
       .order('created_at', { ascending: true });
 
     if (error) {
@@ -18,7 +19,18 @@ export const staffService = {
   },
 
   async create(staff: Omit<Staff, 'id'>): Promise<Staff> {
-    const dbStaff = this.mapToDatabase(staff);
+    // Get max display_order to set the new staff at the end
+    const { data: maxData } = await supabase
+      .from('staff')
+      .select('display_order')
+      .order('display_order', { ascending: false })
+      .limit(1);
+
+    const maxOrder = maxData && maxData.length > 0 ? (maxData[0].display_order || 0) : 0;
+    const dbStaff = {
+      ...this.mapToDatabase(staff),
+      display_order: maxOrder + 1
+    };
 
     const { data, error } = await supabase
       .from('staff')
@@ -53,6 +65,7 @@ export const staffService = {
     if (updates.isActive !== undefined) dbUpdates.is_active = updates.isActive;
     if (updates.sundayPenalty !== undefined) dbUpdates.sunday_penalty = updates.sundayPenalty;
     if (updates.salaryCalculationDays !== undefined) dbUpdates.salary_calculation_days = updates.salaryCalculationDays;
+    if (updates.displayOrder !== undefined) (dbUpdates as any).display_order = updates.displayOrder;
 
     const { data, error } = await supabase
       .from('staff')
@@ -81,6 +94,34 @@ export const staffService = {
     }
   },
 
+  // Update staff order - batch update display_order for all staff
+  async updateStaffOrder(staffIds: string[]): Promise<void> {
+    try {
+      // Update each staff member's display_order based on their position in the array
+      const updates = staffIds.map((id, index) => ({
+        id,
+        display_order: index + 1,
+        updated_at: new Date().toISOString()
+      }));
+
+      // Use upsert to update all records
+      for (const update of updates) {
+        const { error } = await supabase
+          .from('staff')
+          .update({ display_order: update.display_order, updated_at: update.updated_at })
+          .eq('id', update.id);
+
+        if (error) {
+          console.error('Error updating staff order:', error);
+          throw error;
+        }
+      }
+    } catch (error) {
+      console.error('Error in updateStaffOrder:', error);
+      throw error;
+    }
+  },
+
   mapFromDatabase(dbStaff: DatabaseStaff): Staff {
     return {
       id: dbStaff.id,
@@ -95,7 +136,8 @@ export const staffService = {
       joinedDate: dbStaff.joined_date,
       isActive: dbStaff.is_active,
       sundayPenalty: dbStaff.sunday_penalty ?? true,
-      salaryCalculationDays: dbStaff.salary_calculation_days || 30
+      salaryCalculationDays: dbStaff.salary_calculation_days || 30,
+      displayOrder: (dbStaff as any).display_order
     };
   },
 
