@@ -27,6 +27,7 @@ const SalaryHikeHistory: React.FC<SalaryHikeHistoryProps> = ({
 
   const [previousSalaryData, setPreviousSalaryData] = React.useState<{ previousSalary: number | null, changeDate: string | null }>({ previousSalary: null, changeDate: null });
   const [showAddPastHike, setShowAddPastHike] = React.useState(false);
+  const [editingHike, setEditingHike] = React.useState<SalaryHike | null>(null);
   const [pastHikeForm, setPastHikeForm] = React.useState({
     date: '',
     oldSalary: 0,
@@ -44,28 +45,61 @@ const SalaryHikeHistory: React.FC<SalaryHikeHistoryProps> = ({
     }
   }, [staff]);
 
+  const handleEditHike = (hike: SalaryHike) => {
+    setEditingHike(hike);
+    setPastHikeForm({
+      date: hike.hikeDate,
+      oldSalary: hike.oldSalary,
+      newSalary: hike.newSalary,
+      reason: hike.reason || ''
+    });
+    setShowAddPastHike(true);
+  };
+
+  const handleDeleteHike = async (hikeId: string) => {
+    if (!confirm('Are you sure you want to delete this salary record?')) return;
+    try {
+      const { salaryHikeService } = await import('../services/salaryHikeService');
+      await salaryHikeService.delete(hikeId);
+      window.location.reload();
+    } catch (error) {
+      console.error('Error deleting hike:', error);
+      alert('Failed to delete record');
+    }
+  };
+
   const handleAddPastHike = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!staff) return;
 
     try {
       const { salaryHikeService } = await import('../services/salaryHikeService');
-      await salaryHikeService.create({
-        staffId: staff.id,
-        oldSalary: pastHikeForm.oldSalary,
-        newSalary: pastHikeForm.newSalary,
-        hikeDate: pastHikeForm.date,
-        reason: pastHikeForm.reason
-      });
+
+      if (editingHike) {
+        await salaryHikeService.update(editingHike.id, {
+          oldSalary: pastHikeForm.oldSalary,
+          newSalary: pastHikeForm.newSalary,
+          hikeDate: pastHikeForm.date,
+          reason: pastHikeForm.reason
+        });
+      } else {
+        await salaryHikeService.create({
+          staffId: staff.id,
+          oldSalary: pastHikeForm.oldSalary,
+          newSalary: pastHikeForm.newSalary,
+          hikeDate: pastHikeForm.date,
+          reason: pastHikeForm.reason
+        });
+      }
 
       // Refresh data
       setShowAddPastHike(false);
+      setEditingHike(null);
       setPastHikeForm({ date: '', oldSalary: 0, newSalary: 0, reason: '' });
-      // Reload page to refresh data (simplest way since we don't have a refresh prop)
       window.location.reload();
     } catch (error) {
-      console.error('Error adding past hike:', error);
-      alert('Failed to add past hike');
+      console.error('Error saving hike:', error);
+      alert('Failed to save record');
     }
   };
 
@@ -145,7 +179,11 @@ const SalaryHikeHistory: React.FC<SalaryHikeHistoryProps> = ({
               Salary Hike History
             </h4>
             <button
-              onClick={() => setShowAddPastHike(true)}
+              onClick={() => {
+                setEditingHike(null);
+                setPastHikeForm({ date: '', oldSalary: 0, newSalary: 0, reason: '' });
+                setShowAddPastHike(true);
+              }}
               className="text-xs text-blue-600 hover:text-blue-800 font-medium px-2 py-1 rounded hover:bg-blue-50"
             >
               + Add Past Hike
@@ -155,7 +193,7 @@ const SalaryHikeHistory: React.FC<SalaryHikeHistoryProps> = ({
 
         {showAddPastHike && (
           <div className="p-4 bg-blue-50 border-b border-blue-100">
-            <h5 className="text-sm font-semibold text-gray-800 mb-3">Record Previous Salary Hike</h5>
+            <h5 className="text-sm font-semibold text-gray-800 mb-3">{editingHike ? 'Edit Salary Hike Record' : 'Record Previous Salary Hike'}</h5>
             <form onSubmit={handleAddPastHike} className="space-y-3">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 <div>
@@ -217,7 +255,7 @@ const SalaryHikeHistory: React.FC<SalaryHikeHistoryProps> = ({
               <div className="flex justify-end gap-2 pt-2">
                 <button
                   type="button"
-                  onClick={() => setShowAddPastHike(false)}
+                  onClick={() => { setShowAddPastHike(false); setEditingHike(null); }}
                   className="px-3 py-1 text-xs text-gray-600 bg-white border border-gray-300 rounded hover:bg-gray-50"
                 >
                   Cancel
@@ -226,7 +264,7 @@ const SalaryHikeHistory: React.FC<SalaryHikeHistoryProps> = ({
                   type="submit"
                   className="px-3 py-1 text-xs text-white bg-blue-600 rounded hover:bg-blue-700"
                 >
-                  Save Record
+                  {editingHike ? 'Update Record' : 'Save Record'}
                 </button>
               </div>
             </form>
@@ -241,7 +279,7 @@ const SalaryHikeHistory: React.FC<SalaryHikeHistoryProps> = ({
         ) : (
           <div className="divide-y divide-gray-200">
             {salaryHikes.map((hike, index) => (
-              <div key={hike.id} className="p-4 hover:bg-gray-50">
+              <div key={hike.id} className="p-4 hover:bg-gray-50 group">
                 <div className="flex items-center justify-between mb-2">
                   <div className="flex items-center gap-2">
                     <Calendar className="text-gray-400" size={14} />
@@ -258,12 +296,31 @@ const SalaryHikeHistory: React.FC<SalaryHikeHistoryProps> = ({
                       </span>
                     )}
                   </div>
-                  <div className="text-right">
-                    <div className="text-sm text-gray-600">
-                      ₹{hike.oldSalary.toLocaleString()} → ₹{hike.newSalary.toLocaleString()}
+                  <div className="flex items-center gap-3">
+                    <div className="text-right">
+                      <div className="text-sm text-gray-600">
+                        ₹{hike.oldSalary.toLocaleString()} → ₹{hike.newSalary.toLocaleString()}
+                      </div>
+                      <div className="text-sm font-semibold text-green-600">
+                        +₹{(hike.newSalary - hike.oldSalary).toLocaleString()}
+                      </div>
                     </div>
-                    <div className="text-sm font-semibold text-green-600">
-                      +₹{(hike.newSalary - hike.oldSalary).toLocaleString()}
+                    {/* Edit/Delete Actions */}
+                    <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <button
+                        onClick={() => handleEditHike(hike)}
+                        className="p-1.5 text-blue-600 hover:bg-blue-50 rounded"
+                        title="Edit Record"
+                      >
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" /><path d="m15 5 4 4" /></svg>
+                      </button>
+                      <button
+                        onClick={() => handleDeleteHike(hike.id)}
+                        className="p-1.5 text-red-600 hover:bg-red-50 rounded"
+                        title="Delete Record"
+                      >
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18" /><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" /><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" /><line x1="10" x2="10" y1="11" y2="17" /><line x1="14" x2="14" y1="11" y2="17" /></svg>
+                      </button>
                     </div>
                   </div>
                 </div>
