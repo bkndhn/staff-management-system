@@ -3,6 +3,7 @@ import { Staff, SalaryHike, SalaryCategory } from '../types';
 import { Users, Plus, Edit2, Trash2, Archive, Calendar, TrendingUp, MapPin, DollarSign, Check, X, Search, GripVertical, Filter } from 'lucide-react';
 import { calculateExperience } from '../utils/salaryCalculations';
 import SalaryHikeHistory from './SalaryHikeHistory';
+import SalaryHikeDueModal from './SalaryHikeDueModal';
 import { settingsService } from '../services/settingsService';
 
 interface StaffManagementProps {
@@ -26,6 +27,7 @@ const StaffManagement: React.FC<StaffManagementProps> = ({
   const [editingStaff, setEditingStaff] = useState<Staff | null>(null);
   const [showDeleteModal, setShowDeleteModal] = useState<Staff | null>(null);
   const [showSalaryHistory, setShowSalaryHistory] = useState<Staff | null>(null);
+  const [showHikeDueModal, setShowHikeDueModal] = useState(false);
   const [deleteReason, setDeleteReason] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const [locationFilter, setLocationFilter] = useState<string>('All');
@@ -289,7 +291,7 @@ const StaffManagement: React.FC<StaffManagementProps> = ({
         if (staffDueForHike.length === 0) return null;
 
         return (
-          <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 flex items-center justify-between">
+          <div onClick={() => setShowHikeDueModal(true)} className="bg-amber-50 border border-amber-200 rounded-lg p-4 flex items-center justify-between cursor-pointer hover:bg-amber-100 transition-colors">
             <div className="flex items-center gap-3">
               <div className="p-2 bg-amber-100 rounded-full">
                 <TrendingUp className="text-amber-600" size={20} />
@@ -301,12 +303,20 @@ const StaffManagement: React.FC<StaffManagementProps> = ({
                 </p>
               </div>
             </div>
-            {/* You could add a 'View Details' button here if needed */}
+            <span className="text-amber-600 text-sm font-medium">Click to view ?</span>
           </div>
         );
       })()}
 
-      {/* Location Filter Bar */}
+      {showHikeDueModal && (
+        <SalaryHikeDueModal
+          staff={staff}
+          salaryHikes={salaryHikes}
+          onClose={() => setShowHikeDueModal(false)}
+        />
+      )}
+
+            {/* Location Filter Bar */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4">
         <div className="flex items-center gap-4 flex-wrap">
           <div className="flex items-center gap-2 text-gray-600">
