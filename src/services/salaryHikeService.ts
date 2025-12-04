@@ -41,9 +41,33 @@ export const salaryHikeService = {
     return data.map(this.mapFromDatabase);
   },
 
+  async getPreviousSalary(staffId: string, cutoffDate: string = '2024-10-01'): Promise<{ previousSalary: number | null, changeDate: string | null }> {
+    const { data, error } = await supabase
+      .from('salary_hikes')
+      .select('new_salary, hike_date')
+      .eq('staff_id', staffId)
+      .lt('hike_date', cutoffDate)
+      .order('hike_date', { ascending: false })
+      .limit(1);
+
+    if (error) {
+      console.error('Error fetching previous salary:', error);
+      return { previousSalary: null, changeDate: null };
+    }
+
+    if (data && data.length > 0) {
+      return {
+        previousSalary: data[0].new_salary,
+        changeDate: data[0].hike_date
+      };
+    }
+
+    return { previousSalary: null, changeDate: null };
+  },
+
   async create(hike: Omit<SalaryHike, 'id' | 'createdAt'>): Promise<SalaryHike> {
     const dbHike = this.mapToDatabase(hike);
-    
+
     const { data, error } = await supabase
       .from('salary_hikes')
       .insert([dbHike])
@@ -56,6 +80,40 @@ export const salaryHikeService = {
     }
 
     return this.mapFromDatabase(data);
+  },
+
+  async update(id: string, updates: Partial<SalaryHike>): Promise<SalaryHike> {
+    const dbUpdates: Partial<DatabaseSalaryHike> = {};
+    if (updates.oldSalary !== undefined) dbUpdates.old_salary = updates.oldSalary;
+    if (updates.newSalary !== undefined) dbUpdates.new_salary = updates.newSalary;
+    if (updates.hikeDate !== undefined) dbUpdates.hike_date = updates.hikeDate;
+    if (updates.reason !== undefined) dbUpdates.reason = updates.reason;
+
+    const { data, error } = await supabase
+      .from('salary_hikes')
+      .update(dbUpdates)
+      .eq('id', id)
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Error updating salary hike:', error);
+      throw error;
+    }
+
+    return this.mapFromDatabase(data);
+  },
+
+  async delete(id: string): Promise<void> {
+    const { error } = await supabase
+      .from('salary_hikes')
+      .delete()
+      .eq('id', id);
+
+    if (error) {
+      console.error('Error deleting salary hike:', error);
+      throw error;
+    }
   },
 
   mapFromDatabase(dbHike: DatabaseSalaryHike): SalaryHike {

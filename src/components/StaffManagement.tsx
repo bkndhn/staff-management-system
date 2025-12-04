@@ -268,6 +268,44 @@ const StaffManagement: React.FC<StaffManagementProps> = ({
         </div>
       </div>
 
+      {/* Salary Hike Due Banner */}
+      {(() => {
+        const staffDueForHike = activeStaff.filter(member => {
+          const joinedDate = new Date(member.joinedDate);
+          const oneYearAgo = new Date();
+          oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1);
+
+          // Check if joined more than 1 year ago
+          if (joinedDate > oneYearAgo) return false;
+
+          // Check last hike date
+          const memberHikes = getStaffSalaryHikes(member.id);
+          if (memberHikes.length === 0) return true; // No hikes yet
+
+          const lastHikeDate = new Date(memberHikes[0].hikeDate);
+          return lastHikeDate <= oneYearAgo;
+        });
+
+        if (staffDueForHike.length === 0) return null;
+
+        return (
+          <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-amber-100 rounded-full">
+                <TrendingUp className="text-amber-600" size={20} />
+              </div>
+              <div>
+                <h3 className="font-semibold text-amber-900">Salary Hike Due</h3>
+                <p className="text-sm text-amber-700">
+                  {staffDueForHike.length} staff member{staffDueForHike.length !== 1 ? 's are' : ' is'} eligible for a salary hike
+                </p>
+              </div>
+            </div>
+            {/* You could add a 'View Details' button here if needed */}
+          </div>
+        );
+      })()}
+
       {/* Location Filter Bar */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4">
         <div className="flex items-center gap-4 flex-wrap">
@@ -279,8 +317,8 @@ const StaffManagement: React.FC<StaffManagementProps> = ({
             <button
               onClick={() => setLocationFilter('All')}
               className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${locationFilter === 'All'
-                  ? 'bg-blue-600 text-white'
-                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                ? 'bg-blue-600 text-white'
+                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                 }`}
             >
               All ({staff.filter(s => s.isActive).length})
@@ -292,8 +330,8 @@ const StaffManagement: React.FC<StaffManagementProps> = ({
                   key={loc}
                   onClick={() => setLocationFilter(loc)}
                   className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${locationFilter === loc
-                      ? 'bg-blue-600 text-white'
-                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                    ? 'bg-blue-600 text-white'
+                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                     }`}
                 >
                   {loc} ({count})
