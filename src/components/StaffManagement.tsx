@@ -316,7 +316,7 @@ const StaffManagement: React.FC<StaffManagementProps> = ({
         />
       )}
 
-            {/* Location Filter Bar */}
+      {/* Location Filter Bar */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4">
         <div className="flex items-center gap-4 flex-wrap">
           <div className="flex items-center gap-2 text-gray-600">
@@ -581,6 +581,9 @@ const StaffManagement: React.FC<StaffManagementProps> = ({
                 <th className="px-3 py-4 text-left text-xs font-medium text-gray-500 uppercase">Basic</th>
                 <th className="px-3 py-4 text-left text-xs font-medium text-gray-500 uppercase">Incentive</th>
                 <th className="px-3 py-4 text-left text-xs font-medium text-gray-500 uppercase">HRA</th>
+                {salaryCategories.filter(c => !['basic', 'incentive', 'hra'].includes(c.id)).map(category => (
+                  <th key={category.id} className="px-3 py-4 text-left text-xs font-medium text-gray-500 uppercase">{category.name}</th>
+                ))}
                 <th className="px-3 py-4 text-left text-xs font-medium text-gray-500 uppercase">Total</th>
                 <th className="px-3 py-4 text-left text-xs font-medium text-gray-500 uppercase">Salary History</th>
                 <th className="px-3 py-4 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
@@ -632,6 +635,11 @@ const StaffManagement: React.FC<StaffManagementProps> = ({
                     <td className="px-3 py-4 text-sm text-gray-900">₹{member.basicSalary.toLocaleString()}</td>
                     <td className="px-3 py-4 text-sm text-gray-900">₹{member.incentive.toLocaleString()}</td>
                     <td className="px-3 py-4 text-sm text-gray-900">₹{member.hra.toLocaleString()}</td>
+                    {salaryCategories.filter(c => !['basic', 'incentive', 'hra'].includes(c.id)).map(category => (
+                      <td key={category.id} className="px-3 py-4 text-sm text-gray-900">
+                        ₹{(member.salarySupplements?.[category.id] || 0).toLocaleString()}
+                      </td>
+                    ))}
                     <td className="px-3 py-4 text-sm font-semibold text-green-600">₹{member.totalSalary.toLocaleString()}</td>
                     <td className="px-3 py-4">
                       <button

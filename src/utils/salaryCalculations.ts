@@ -244,8 +244,11 @@ export const calculateSalary = (
     }
   }
 
+  // Calculate supplements
+  const supplementsTotal = staff.salarySupplements ? Object.values(staff.salarySupplements).reduce((a, b) => a + b, 0) : 0;
+
   // Gross salary calculation
-  const grossSalary = roundToNearest10(basicEarned + incentiveEarned + hraEarned);
+  const grossSalary = roundToNearest10(basicEarned + incentiveEarned + hraEarned + supplementsTotal);
 
   // Advance and deduction handling with carry-forward
   const oldAdv = advances?.oldAdvance || getPreviousMonthAdvance(staff.id, allAdvances, currentMonth, currentYear);

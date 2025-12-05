@@ -3,6 +3,7 @@ import { Staff, Attendance, SalaryDetail, AdvanceDeduction, PartTimeSalaryDetail
 import { DollarSign, Download, Users, Calendar, TrendingUp, Edit2, Save, X, FileSpreadsheet, Search } from 'lucide-react';
 import { calculateAttendanceMetrics, calculateSalary, calculatePartTimeSalary, roundToNearest10 } from '../utils/salaryCalculations';
 import { exportSalaryToExcel, exportSalaryPDF } from '../utils/exportUtils';
+import { settingsService } from '../services/settingsService';
 
 interface SalaryManagementProps {
   staff: Staff[];
@@ -32,11 +33,13 @@ const SalaryManagement: React.FC<SalaryManagementProps> = ({
 }) => {
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth());
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
-  const [locationFilter, setLocationFilter] = useState<'All' | 'Big Shop' | 'Small Shop' | 'Godown'>('All');
+  const [locationFilter, setLocationFilter] = useState<string>('All');
   const [editMode, setEditMode] = useState(false);
   const [tempAdvances, setTempAdvances] = useState<{ [key: string]: TempSalaryData }>({});
   const [saving, setSaving] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const salaryCategories = settingsService.getSalaryCategories();
+  const customCategories = salaryCategories.filter(c => !['basic', 'incentive', 'hra'].includes(c.id));
 
   const activeStaff = staff.filter(member => {
     if (!member.isActive) return false;
@@ -359,9 +362,7 @@ const SalaryManagement: React.FC<SalaryManagementProps> = ({
               className="w-full sm:w-auto px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             >
               <option value="All">All Locations</option>
-              <option value="Big Shop">Big Shop</option>
-              <option value="Small Shop">Small Shop</option>
-              <option value="Godown">Godown</option>
+              {settingsService.getLocations().map(loc => (<option key={loc} value={loc}>{loc}</option>))}
             </select>
           </div>
         </div>
@@ -499,7 +500,7 @@ const SalaryManagement: React.FC<SalaryManagementProps> = ({
                 <th className="px-2 md:px-4 py-3 md:py-4 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Deduction</th>
                 <th className="px-2 md:px-4 py-3 md:py-4 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Basic</th>
                 <th className="px-2 md:px-4 py-3 md:py-4 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Incentive</th>
-                <th className="px-2 md:px-4 py-3 md:py-4 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">HRA</th>
+                <th className="px-2 md:px-4 py-3 md:py-4 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">HRA</th>{customCategories.map(cat => (<th key={cat.id} className="px-2 md:px-4 py-3 md:py-4 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">{cat.name}</th>))}
                 <th className="px-2 md:px-4 py-3 md:py-4 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Sun Penalty</th>
                 <th className="px-2 md:px-4 py-3 md:py-4 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Gross</th>
                 <th className="px-2 md:px-4 py-3 md:py-4 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Net Salary</th>

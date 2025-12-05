@@ -34,6 +34,8 @@ export interface DatabaseStaff {
   is_active: boolean;
   sunday_penalty: boolean;
   salary_calculation_days: number;
+  salary_supplements?: Record<string, number>;
+  display_order?: number;
   created_at: string;
   updated_at: string;
 }

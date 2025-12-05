@@ -137,7 +137,8 @@ export const staffService = {
       isActive: dbStaff.is_active,
       sundayPenalty: dbStaff.sunday_penalty ?? true,
       salaryCalculationDays: dbStaff.salary_calculation_days || 30,
-      displayOrder: (dbStaff as any).display_order
+      salarySupplements: dbStaff.salary_supplements || {},
+      displayOrder: dbStaff.display_order
     };
   },
 
@@ -154,7 +155,8 @@ export const staffService = {
       joined_date: staff.joinedDate,
       is_active: staff.isActive,
       sunday_penalty: staff.sundayPenalty ?? true,
-      salary_calculation_days: staff.salaryCalculationDays || 30
+      salary_calculation_days: staff.salaryCalculationDays || 30,
+      salary_supplements: staff.salarySupplements || {}
     };
   }
 };

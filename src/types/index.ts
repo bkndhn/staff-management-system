@@ -63,6 +63,7 @@ export interface SalaryDetail {
   basicEarned: number;
   incentiveEarned: number;
   hraEarned: number;
+  salarySupplements?: Record<string, number>;
   sundayPenalty: number;
   grossSalary: number;
   newAdv: number;

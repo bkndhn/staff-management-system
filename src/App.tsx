@@ -91,17 +91,7 @@ function App() {
       ]);
 
       // Merge salary supplements
-      const mergedStaff = staffData.map(s => {
-        const supplements = settingsService.getStaffSupplement(s.id);
-        const supplementsTotal = Object.values(supplements).reduce((a, b) => a + b, 0);
-        return {
-          ...s,
-          salarySupplements: supplements,
-          totalSalary: s.basicSalary + s.incentive + s.hra + supplementsTotal
-        };
-      });
-
-      setStaff(mergedStaff);
+      setStaff(staffData);
       setAttendance(attendanceData);
       setAdvances(advanceData);
       setOldStaffRecords(oldStaffData);

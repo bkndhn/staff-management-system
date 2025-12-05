@@ -47,7 +47,7 @@ const PartTimeStaff: React.FC<PartTimeStaffProps> = ({
         leavingTime: ''
     });
     const [showDeleteModal, setShowDeleteModal] = useState<string | null>(null);
-    const [locationFilter, setLocationFilter] = useState<'All' | 'Big Shop' | 'Small Shop' | 'Godown'>(
+    const [locationFilter, setLocationFilter] = useState<string>(
         userLocation ? userLocation as any : 'All'
     );
     // Salary Report Filter: Defaults to ['All'] for admins, otherwise defaults to user's location in array
@@ -106,7 +106,7 @@ const PartTimeStaff: React.FC<PartTimeStaffProps> = ({
     };
     const [newStaffData, setNewStaffData] = useState({
         name: '',
-        location: (userLocation || 'Big Shop') as 'Big Shop' | 'Small Shop' | 'Godown',
+        location: (userLocation || settingsService.getLocations()[0] || 'Big Shop'),
         shift: (new Date().getDay() === 0 ? 'Both' : 'Morning') as 'Morning' | 'Evening' | 'Both',
         salary: 0,
         arrivalTime: '',
@@ -560,7 +560,7 @@ const PartTimeStaff: React.FC<PartTimeStaffProps> = ({
         if (userLocation) {
             return [userLocation];
         }
-        return ['All', 'Big Shop', 'Small Shop', 'Godown'];
+        return ['All', ...settingsService.getLocations()];
     };
     return (
         <div className="p-4 md:p-6 space-y-4 md:space-y-6">
@@ -641,9 +641,7 @@ const PartTimeStaff: React.FC<PartTimeStaffProps> = ({
                                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                                 disabled={!!userLocation}
                             >
-                                <option value="Big Shop">Big Shop</option>
-                                <option value="Small Shop">Small Shop</option>
-                                <option value="Godown">Godown</option>
+                                {settingsService.getLocations().map(loc => (<option key={loc} value={loc}>{loc}</option>))}
                             </select>
                         </div>
                         <div>
@@ -830,9 +828,7 @@ const PartTimeStaff: React.FC<PartTimeStaffProps> = ({
                                                             onChange={(e) => setEditData({ ...editData, location: e.target.value })}
                                                             className="px-2 py-1 text-xs border rounded"
                                                         >
-                                                            <option value="Big Shop">Big Shop</option>
-                                                            <option value="Small Shop">Small Shop</option>
-                                                            <option value="Godown">Godown</option>
+                                                            {settingsService.getLocations().map(loc => (<option key={loc} value={loc}>{loc}</option>))}
                                                         </select>
                                                         <select
                                                             value={editData.shift}
