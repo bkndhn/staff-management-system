@@ -294,8 +294,7 @@ export const calculateLocationAttendance = (
   const locationAttendance = attendance.filter(record => {
     if (record.isPartTime) {
       // For part-time staff, check by location in attendance record
-      return record.date === date &&
-        attendance.find(a => a.id === record.id && a.staffName)?.location === location;
+      return record.date === date && record.location === location;
     } else {
       // For full-time staff, check by staff member location
       const staffMember = staff.find(s => s.id === record.staffId);

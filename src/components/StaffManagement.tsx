@@ -172,7 +172,7 @@ const StaffManagement: React.FC<StaffManagementProps> = ({
   };
 
   const handleEdit = (member: Staff) => {
-    const supplements = settingsService.getStaffSupplement(member.id);
+    const supplements = member.salarySupplements || {};
     setFormData({
       name: member.name,
       location: member.location,
