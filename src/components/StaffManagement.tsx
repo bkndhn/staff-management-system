@@ -40,18 +40,29 @@ const StaffManagement: React.FC<StaffManagementProps> = ({
   // Settings State
   const [showLocationManager, setShowLocationManager] = useState(false);
   const [showCategoryManager, setShowCategoryManager] = useState(false);
-  const [locations, setLocations] = useState<string[]>(settingsService.getLocations());
+  const [locations, setLocations] = useState<{ id: string; name: string }[]>([]); // Changed to object array
   const [salaryCategories, setSalaryCategories] = useState<SalaryCategory[]>(settingsService.getSalaryCategories());
   const [newLocation, setNewLocation] = useState('');
   const [newCategory, setNewCategory] = useState('');
-  const [editingLocation, setEditingLocation] = useState<string | null>(null);
+  const [editingLocation, setEditingLocation] = useState<{ id: string; name: string } | null>(null); // Changed to object
   const [editingCategory, setEditingCategory] = useState<string | null>(null);
   const [editLocationValue, setEditLocationValue] = useState('');
   const [editCategoryValue, setEditCategoryValue] = useState('');
 
+  // Fetch locations on mount
+  React.useEffect(() => {
+    const fetchLocations = async () => {
+      // Dynamic import to avoid circular dependency
+      const { locationService } = await import('../services/locationService');
+      const locs = await locationService.getLocations();
+      setLocations(locs);
+    };
+    fetchLocations();
+  }, []);
+
   const [formData, setFormData] = useState({
     name: '',
-    location: locations[0] || 'Big Shop',
+    location: '', // default empty, set in useEffect if needed or kept empty
     basicSalary: 15000,
     incentive: 10000,
     hra: 0,
@@ -61,6 +72,13 @@ const StaffManagement: React.FC<StaffManagementProps> = ({
     sundayPenalty: true,
     salaryCalculationDays: 30
   });
+
+  // Set default location when locations load
+  React.useEffect(() => {
+    if (locations.length > 0 && !formData.location) {
+      setFormData(prev => ({ ...prev, location: locations[0]?.name }));
+    }
+  }, [locations]);
 
   const activeStaff = staff.filter(member => {
     if (!member.isActive) return false;
@@ -73,6 +91,47 @@ const StaffManagement: React.FC<StaffManagementProps> = ({
       member.location.toLowerCase().includes(query)
     );
   });
+
+  // ... (drag handlers unchanged) ...
+
+  const handleCreateLocation = async () => {
+    if (newLocation.trim()) {
+      const { locationService } = await import('../services/locationService');
+      const added = await locationService.addLocation(newLocation.trim());
+      if (added) {
+        setLocations(prev => [...prev, added]);
+        setNewLocation('');
+      }
+    }
+  };
+
+  const handleUpdateLocation = async (id: string) => {
+    if (editLocationValue.trim()) {
+      const { locationService } = await import('../services/locationService');
+      const updated = await locationService.updateLocation(id, editLocationValue.trim());
+      if (updated) {
+        setLocations(prev => prev.map(l => l.id === id ? updated : l));
+        setEditingLocation(null);
+        setEditLocationValue('');
+      }
+    }
+  };
+
+  const handleDeleteLocation = async (id: string) => {
+    if (window.confirm('Are you sure you want to delete this location?')) {
+      const { locationService } = await import('../services/locationService');
+      const success = await locationService.deleteLocation(id);
+      if (success) {
+        setLocations(prev => prev.filter(l => l.id !== id));
+      }
+    }
+  };
+
+  // ... (rest of component)
+
+  // Need to update the render logic for "Manage Locations" modal to use objects
+  // and update dropdowns to map locations.
+
 
   // Drag and drop handlers
   const handleDragStart = (e: React.DragEvent, member: Staff) => {
@@ -138,7 +197,7 @@ const StaffManagement: React.FC<StaffManagementProps> = ({
   const resetForm = () => {
     setFormData({
       name: '',
-      location: locations[0] || 'Big Shop',
+      location: locations[0]?.name || 'Big Shop',
       basicSalary: 15000,
       incentive: 10000,
       hra: 0,
@@ -161,8 +220,7 @@ const StaffManagement: React.FC<StaffManagementProps> = ({
     const customCategories = salaryCategories.filter(c => !['basic', 'incentive', 'hra', 'meal_allowance'].includes(c.id));
     totalSalary += customCategories.reduce((sum, cat) => sum + (formData.salarySupplements[cat.id] || 0), 0);
 
-    // Kept supplementsTotal just in case it's used elsewhere, otherwise remove if unused
-    const supplementsTotal = Object.values(formData.salarySupplements).reduce((a, b) => a + b, 0);
+
     const experience = calculateExperience(formData.joinedDate);
 
     if (editingStaff) {
@@ -361,17 +419,17 @@ const StaffManagement: React.FC<StaffManagementProps> = ({
               All ({staff.filter(s => s.isActive).length})
             </button>
             {locations.map(loc => {
-              const count = staff.filter(s => s.isActive && s.location === loc).length;
+              const count = staff.filter(s => s.isActive && s.location === loc.name).length;
               return (
                 <button
-                  key={loc}
-                  onClick={() => setLocationFilter(loc)}
-                  className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${locationFilter === loc
+                  key={loc.id}
+                  onClick={() => setLocationFilter(loc.name)}
+                  className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${locationFilter === loc.name
                     ? 'bg-blue-600 text-white'
                     : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                     }`}
                 >
-                  {loc} ({count})
+                  {loc.name} ({count})
                 </button>
               );
             })}
@@ -405,7 +463,7 @@ const StaffManagement: React.FC<StaffManagementProps> = ({
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 >
                   {locations.map(loc => (
-                    <option key={loc} value={loc}>{loc}</option>
+                    <option key={loc.id} value={loc.name}>{loc.name}</option>
                   ))}
                 </select>
               </div>
@@ -620,10 +678,10 @@ const StaffManagement: React.FC<StaffManagementProps> = ({
                 <th className="px-3 py-4 text-left text-xs font-medium text-gray-500 uppercase sticky left-0 bg-gray-50">Name</th>
                 <th className="px-3 py-4 text-left text-xs font-medium text-gray-500 uppercase">Location</th>
                 <th className="px-3 py-4 text-left text-xs font-medium text-gray-500 uppercase">Experience</th>
-                <th className="px-3 py-4 text-left text-xs font-medium text-gray-500 uppercase">Basic</th>
-                <th className="px-3 py-4 text-left text-xs font-medium text-gray-500 uppercase">Incentive</th>
-                <th className="px-3 py-4 text-left text-xs font-medium text-gray-500 uppercase">HRA</th>
-                <th className="px-3 py-4 text-left text-xs font-medium text-gray-500 uppercase">Meal Allowance</th>
+                <th className="px-3 py-4 text-left text-xs font-medium text-gray-500 uppercase">{salaryCategories.find(c => c.id === 'basic')?.name || 'Basic'}</th>
+                <th className="px-3 py-4 text-left text-xs font-medium text-gray-500 uppercase">{salaryCategories.find(c => c.id === 'incentive')?.name || 'Incentive'}</th>
+                <th className="px-3 py-4 text-left text-xs font-medium text-gray-500 uppercase">{salaryCategories.find(c => c.id === 'hra')?.name || 'HRA'}</th>
+                <th className="px-3 py-4 text-left text-xs font-medium text-gray-500 uppercase">{salaryCategories.find(c => c.id === 'meal_allowance')?.name || 'Meal Allowance'}</th>
                 {salaryCategories.filter(c => !['basic', 'incentive', 'hra', 'meal_allowance'].includes(c.id)).map(category => (
                   <th key={category.id} className="px-3 py-4 text-left text-xs font-medium text-gray-500 uppercase">{category.name}</th>
                 ))}
@@ -722,201 +780,203 @@ const StaffManagement: React.FC<StaffManagementProps> = ({
       </div>
 
       {/* Location Manager Modal */}
-      {
-        showLocationManager && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-            <div className="bg-white rounded-xl p-6 max-w-md w-full">
-              <h3 className="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2">
+      {showLocationManager && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl p-6 max-w-md w-full">
+            <div className="flex items-center justify-between mb-6">
+              <h3 className="text-lg font-bold text-gray-800 flex items-center gap-2">
                 <MapPin className="text-purple-600" size={20} />
                 Manage Locations
               </h3>
-              <div className="flex gap-2 mb-4">
-                <input
-                  type="text"
-                  value={newLocation}
-                  onChange={(e) => setNewLocation(e.target.value)}
-                  placeholder="New Location Name"
-                  className="flex-1 px-3 py-2 border border-gray-300 rounded-lg"
-                />
-                <button
-                  onClick={() => {
-                    if (newLocation.trim()) {
-                      const updated = settingsService.addLocation(newLocation.trim());
-                      setLocations(updated);
-                      setNewLocation('');
-                    }
-                  }}
-                  className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700"
-                >
-                  Add
-                </button>
-              </div>
-              <div className="space-y-2 max-h-60 overflow-y-auto">
-                {locations.map(loc => (
-                  <div key={loc} className="flex items-center justify-between p-2 bg-gray-50 rounded-lg">
-                    {editingLocation === loc ? (
-                      <>
-                        <input
-                          type="text"
-                          value={editLocationValue}
-                          onChange={(e) => setEditLocationValue(e.target.value)}
-                          className="flex-1 px-2 py-1 border border-gray-300 rounded text-sm"
-                          autoFocus
-                        />
-                        <div className="flex gap-2 ml-2">
+              <button onClick={() => setShowLocationManager(false)} className="text-gray-400 hover:text-gray-600">
+                <X size={20} />
+              </button>
+            </div>
+
+            <div className="flex gap-2 mb-6">
+              <input
+                type="text"
+                value={newLocation}
+                onChange={(e) => setNewLocation(e.target.value)}
+                placeholder="New Location Name"
+                className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+              />
+              <button
+                onClick={handleCreateLocation}
+                disabled={!newLocation.trim()}
+                className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:bg-gray-300 disabled:cursor-not-allowed"
+              >
+                Add
+              </button>
+            </div>
+
+            <div className="space-y-3 max-h-[300px] overflow-y-auto">
+              {locations.map(loc => (
+                <div key={loc.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg group hover:bg-white hover:shadow-sm transition-all border border-transparent hover:border-gray-200">
+                  {editingLocation?.id === loc.id ? (
+                    <div className="flex-1 flex gap-2 mr-2">
+                      <input
+                        type="text"
+                        value={editLocationValue}
+                        onChange={(e) => setEditLocationValue(e.target.value)}
+                        className="flex-1 px-2 py-1 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-blue-500"
+                        autoFocus
+                      />
+                      <button
+                        onClick={() => handleUpdateLocation(loc.id)}
+                        className="p-1 text-green-600 hover:bg-green-50 rounded"
+                        title="Save"
+                      >
+                        <Check size={16} />
+                      </button>
+                      <button
+                        onClick={() => setEditingLocation(null)}
+                        className="p-1 text-red-600 hover:bg-red-50 rounded"
+                        title="Cancel"
+                      >
+                        <X size={16} />
+                      </button>
+                    </div>
+                  ) : (
+                    <>
+                      <span className="font-medium text-gray-700">{loc.name}</span>
+                      <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <button
+                          onClick={() => {
+                            setEditingLocation(loc);
+                            setEditLocationValue(loc.name);
+                          }}
+                          className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                          title="Edit"
+                        >
+                          <Edit2 size={14} />
+                        </button>
+                        <button
+                          onClick={() => handleDeleteLocation(loc.id)}
+                          className="p-1.5 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                          title="Delete"
+                        >
+                          <Trash2 size={14} />
+                        </button>
+                      </div>
+                    </>
+                  )}
+                </div>
+              ))}
+              {locations.length === 0 && (
+                <p className="text-center text-gray-500 py-4">No locations added yet</p>
+              )}
+            </div>
+
+            <div className="mt-6 flex justify-end">
+              <button
+                onClick={() => setShowLocationManager(false)}
+                className="px-4 py-2 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400 font-medium transition-colors"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Salary Category Manager Modal */}
+      {showCategoryManager && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl p-6 max-w-md w-full">
+            <h3 className="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2">
+              <DollarSign className="text-green-600" size={20} />
+              Manage Salary Categories
+            </h3>
+            <div className="flex gap-2 mb-4">
+              <input
+                type="text"
+                value={newCategory}
+                onChange={(e) => setNewCategory(e.target.value)}
+                placeholder="New Category Name"
+                className="flex-1 px-3 py-2 border border-gray-300 rounded-lg"
+              />
+              <button
+                onClick={() => {
+                  if (newCategory.trim()) {
+                    const updated = settingsService.addSalaryCategory(newCategory.trim());
+                    setSalaryCategories(updated);
+                    setNewCategory('');
+                  }
+                }}
+                className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
+              >
+                Add
+              </button>
+            </div>
+            <div className="space-y-2 max-h-60 overflow-y-auto">
+              {salaryCategories.map(cat => (
+                <div key={cat.id} className="flex items-center justify-between p-2 bg-gray-50 rounded-lg">
+                  {editingCategory === cat.id ? (
+                    <>
+                      <input
+                        type="text"
+                        value={editCategoryValue}
+                        onChange={(e) => setEditCategoryValue(e.target.value)}
+                        className="flex-1 px-2 py-1 border border-gray-300 rounded text-sm"
+                        autoFocus
+                      />
+                      <div className="flex gap-2 ml-2">
+                        <button
+                          onClick={() => {
+                            if (editCategoryValue.trim()) {
+                              const updated = settingsService.updateSalaryCategory(cat.id, editCategoryValue.trim());
+                              setSalaryCategories(updated);
+                              setEditingCategory(null);
+                            }
+                          }}
+                          className="text-green-600 hover:text-green-700"
+                        >
+                          <Check size={16} />
+                        </button>
+                        <button onClick={() => setEditingCategory(null)} className="text-gray-500 hover:text-gray-700">
+                          <X size={16} />
+                        </button>
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <span>{cat.name}</span>
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => { setEditingCategory(cat.id); setEditCategoryValue(cat.name); }}
+                          className="text-blue-500 hover:text-blue-700"
+                        >
+                          <Edit2 size={16} />
+                        </button>
+                        {!['basic', 'incentive', 'hra'].includes(cat.id) && (
                           <button
                             onClick={() => {
-                              if (editLocationValue.trim()) {
-                                const updated = settingsService.updateLocation(loc, editLocationValue.trim());
-                                setLocations(updated);
-                                setEditingLocation(null);
-                              }
-                            }}
-                            className="text-green-600 hover:text-green-700"
-                          >
-                            <Check size={16} />
-                          </button>
-                          <button onClick={() => setEditingLocation(null)} className="text-gray-500 hover:text-gray-700">
-                            <X size={16} />
-                          </button>
-                        </div>
-                      </>
-                    ) : (
-                      <>
-                        <span>{loc}</span>
-                        <div className="flex gap-2">
-                          <button
-                            onClick={() => { setEditingLocation(loc); setEditLocationValue(loc); }}
-                            className="text-blue-500 hover:text-blue-700"
-                          >
-                            <Edit2 size={16} />
-                          </button>
-                          <button
-                            onClick={() => {
-                              const updated = settingsService.deleteLocation(loc);
-                              setLocations(updated);
+                              const updated = settingsService.deleteSalaryCategory(cat.id);
+                              setSalaryCategories(updated);
                             }}
                             className="text-red-500 hover:text-red-700"
                           >
                             <Trash2 size={16} />
                           </button>
-                        </div>
-                      </>
-                    )}
-                  </div>
-                ))}
-              </div>
-              <div className="mt-6 flex justify-end">
-                <button
-                  onClick={() => setShowLocationManager(false)}
-                  className="px-4 py-2 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400"
-                >
-                  Close
-                </button>
-              </div>
+                        )}
+                      </div>
+                    </>
+                  )}
+                </div>
+              ))}
+            </div>
+            <div className="mt-6 flex justify-end">
+              <button
+                onClick={() => setShowCategoryManager(false)}
+                className="px-4 py-2 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400"
+              >
+                Close
+              </button>
             </div>
           </div>
-        )
-      }
-
-      {/* Category Manager Modal */}
-      {
-        showCategoryManager && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-            <div className="bg-white rounded-xl p-6 max-w-md w-full">
-              <h3 className="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2">
-                <DollarSign className="text-green-600" size={20} />
-                Manage Salary Categories
-              </h3>
-              <div className="flex gap-2 mb-4">
-                <input
-                  type="text"
-                  value={newCategory}
-                  onChange={(e) => setNewCategory(e.target.value)}
-                  placeholder="New Category Name"
-                  className="flex-1 px-3 py-2 border border-gray-300 rounded-lg"
-                />
-                <button
-                  onClick={() => {
-                    if (newCategory.trim()) {
-                      const updated = settingsService.addSalaryCategory(newCategory.trim());
-                      setSalaryCategories(updated);
-                      setNewCategory('');
-                    }
-                  }}
-                  className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
-                >
-                  Add
-                </button>
-              </div>
-              <div className="space-y-2 max-h-60 overflow-y-auto">
-                {salaryCategories.map(cat => (
-                  <div key={cat.id} className="flex items-center justify-between p-2 bg-gray-50 rounded-lg">
-                    {editingCategory === cat.id ? (
-                      <>
-                        <input
-                          type="text"
-                          value={editCategoryValue}
-                          onChange={(e) => setEditCategoryValue(e.target.value)}
-                          className="flex-1 px-2 py-1 border border-gray-300 rounded text-sm"
-                          autoFocus
-                        />
-                        <div className="flex gap-2 ml-2">
-                          <button
-                            onClick={() => {
-                              if (editCategoryValue.trim()) {
-                                const updated = settingsService.updateSalaryCategory(cat.id, editCategoryValue.trim());
-                                setSalaryCategories(updated);
-                                setEditingCategory(null);
-                              }
-                            }}
-                            className="text-green-600 hover:text-green-700"
-                          >
-                            <Check size={16} />
-                          </button>
-                          <button onClick={() => setEditingCategory(null)} className="text-gray-500 hover:text-gray-700">
-                            <X size={16} />
-                          </button>
-                        </div>
-                      </>
-                    ) : (
-                      <>
-                        <span>{cat.name}</span>
-                        <div className="flex gap-2">
-                          <button
-                            onClick={() => { setEditingCategory(cat.id); setEditCategoryValue(cat.name); }}
-                            className="text-blue-500 hover:text-blue-700"
-                          >
-                            <Edit2 size={16} />
-                          </button>
-                          {!['basic', 'incentive', 'hra'].includes(cat.id) && (
-                            <button
-                              onClick={() => {
-                                const updated = settingsService.deleteSalaryCategory(cat.id);
-                                setSalaryCategories(updated);
-                              }}
-                              className="text-red-500 hover:text-red-700"
-                            >
-                              <Trash2 size={16} />
-                            </button>
-                          )}
-                        </div>
-                      </>
-                    )}
-                  </div>
-                ))}
-              </div>
-              <div className="mt-6 flex justify-end">
-                <button
-                  onClick={() => setShowCategoryManager(false)}
-                  className="px-4 py-2 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400"
-                >
-                  Close
-                </button>
-              </div>
-            </div>
-          </div>
-        )
+        </div>
+      )
       }
     </div >
   );

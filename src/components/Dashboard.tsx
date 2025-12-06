@@ -35,23 +35,34 @@ const Dashboard: React.FC<DashboardProps> = ({ staff, attendance, selectedDate, 
   // Calculate total present value including half days (corrected logic)
   const totalPresentValue = presentToday + halfDayToday;
 
-  const locations = [
-    {
-      name: 'Big Shop',
-      color: 'bg-blue-100 text-blue-800',
-      stats: calculateLocationAttendance(activeStaff, todayAttendance, selectedDate, 'Big Shop')
-    },
-    {
-      name: 'Small Shop',
-      color: 'bg-green-100 text-green-800',
-      stats: calculateLocationAttendance(activeStaff, todayAttendance, selectedDate, 'Small Shop')
-    },
-    {
-      name: 'Godown',
-      color: 'bg-purple-100 text-purple-800',
-      stats: calculateLocationAttendance(activeStaff, todayAttendance, selectedDate, 'Godown')
-    }
-  ];
+  const [locations, setLocations] = React.useState<{ name: string; color: string; stats: any }[]>([]);
+
+  React.useEffect(() => {
+    const loadLocations = async () => {
+      // Import locally to avoid circle dependency issues if any, or just standard import
+      const { locationService } = await import('../services/locationService');
+      const fetchedLocations = await locationService.getLocations();
+
+      const colors = [
+        'bg-blue-100 text-blue-800',
+        'bg-green-100 text-green-800',
+        'bg-purple-100 text-purple-800',
+        'bg-orange-100 text-orange-800',
+        'bg-teal-100 text-teal-800',
+        'bg-indigo-100 text-indigo-800'
+      ];
+
+      const formattedLocations = fetchedLocations.map((loc, index) => ({
+        name: loc.name,
+        color: colors[index % colors.length],
+        stats: calculateLocationAttendance(activeStaff, todayAttendance, selectedDate, loc.name)
+      }));
+
+      setLocations(formattedLocations);
+    };
+
+    loadLocations();
+  }, [activeStaff, todayAttendance, selectedDate]);
 
   // Helper function to format staff names with shift info
   const formatStaffName = (staffId: string, isPartTime: boolean = false, staffName?: string, shift?: string) => {
@@ -113,7 +124,7 @@ const Dashboard: React.FC<DashboardProps> = ({ staff, attendance, selectedDate, 
             <div>
               <p className="text-sm text-gray-600 mb-1">Active Staff</p>
               <p className="text-2xl md:text-3xl font-bold text-gray-800">{activeStaff.length}</p>
-              <p className="text-xs text-gray-500">{fullTimeStaff.length} FT, {partTimeStaff.length} PT</p>
+
             </div>
             <div className="w-10 h-10 md:w-12 md:h-12 bg-blue-100 rounded-lg flex items-center justify-center">
               <Users className="text-blue-600" size={20} />

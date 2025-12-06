@@ -35,6 +35,19 @@ const SalaryManagement: React.FC<SalaryManagementProps> = ({
 }) => {
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth());
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
+  const [locations, setLocations] = useState<{ id: string; name: string }[]>([]);
+
+  // Fetch locations on mount
+  React.useEffect(() => {
+    const fetchLocations = async () => {
+      // Dynamic import to avoid circular dependency
+      const { locationService } = await import('../services/locationService');
+      const locs = await locationService.getLocations();
+      setLocations(locs);
+    };
+    fetchLocations();
+  }, []);
+
   const [locationFilter, setLocationFilter] = useState<string>('All');
   const [editMode, setEditMode] = useState(false);
   const [tempAdvances, setTempAdvances] = useState<{ [key: string]: TempSalaryData }>({});
@@ -518,7 +531,7 @@ const SalaryManagement: React.FC<SalaryManagementProps> = ({
               className="w-full sm:w-auto px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             >
               <option value="All">All Locations</option>
-              {settingsService.getLocations().map(loc => (<option key={loc} value={loc}>{loc}</option>))}
+              {locations.map(loc => (<option key={loc.id} value={loc.name}>{loc.name}</option>))}
             </select>
           </div>
         </div>
@@ -654,10 +667,10 @@ const SalaryManagement: React.FC<SalaryManagementProps> = ({
                 <th className="px-2 md:px-4 py-3 md:py-4 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Old Adv</th>
                 <th className="px-2 md:px-4 py-3 md:py-4 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Cur Adv</th>
                 <th className="px-2 md:px-4 py-3 md:py-4 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Deduction</th>
-                <th className="px-2 md:px-4 py-3 md:py-4 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Basic</th>
-                <th className="px-2 md:px-4 py-3 md:py-4 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Incentive</th>
-                <th className="px-2 md:px-4 py-3 md:py-4 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">HRA</th>
-                <th className="px-2 md:px-4 py-3 md:py-4 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Meal Allowance</th>
+                <th className="px-2 md:px-4 py-3 md:py-4 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">{salaryCategories.find(c => c.id === 'basic')?.name || 'Basic'}</th>
+                <th className="px-2 md:px-4 py-3 md:py-4 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">{salaryCategories.find(c => c.id === 'incentive')?.name || 'Incentive'}</th>
+                <th className="px-2 md:px-4 py-3 md:py-4 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">{salaryCategories.find(c => c.id === 'hra')?.name || 'HRA'}</th>
+                <th className="px-2 md:px-4 py-3 md:py-4 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">{salaryCategories.find(c => c.id === 'meal_allowance')?.name || 'Meal Allowance'}</th>
                 {customCategories.map(cat => (<th key={cat.id} className="px-2 md:px-4 py-3 md:py-4 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">{cat.name}</th>))}
                 <th className="px-2 md:px-4 py-3 md:py-4 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Sun Penalty</th>
                 <th className="px-2 md:px-4 py-3 md:py-4 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Gross</th>

@@ -37,13 +37,17 @@ const DEFAULT_PART_TIME_RATES: PartTimeRates = {
 };
 
 export const settingsService = {
-    // Locations
+    // Locations - Now async/fetched from DB via locationService
+    // We keep these for type compatibility but they should be replaced in components
     getLocations(): string[] {
+        // Fallback for sync calls, but components should use locationService
         const stored = localStorage.getItem(STORAGE_KEYS.LOCATIONS);
         return stored ? JSON.parse(stored) : DEFAULT_LOCATIONS;
     },
 
+    // Legacy method - components should use locationService directly
     addLocation(location: string): string[] {
+        console.warn('Use locationService.addLocation instead');
         const locations = this.getLocations();
         if (!locations.includes(location)) {
             const newLocations = [...locations, location];
@@ -53,7 +57,9 @@ export const settingsService = {
         return locations;
     },
 
+    // Legacy method - components should use locationService directly
     updateLocation(oldLocation: string, newLocation: string): string[] {
+        console.warn('Use locationService.updateLocation instead');
         const locations = this.getLocations();
         const index = locations.indexOf(oldLocation);
         if (index !== -1) {
