@@ -20,6 +20,7 @@ interface TempSalaryData {
   basicOverride?: number;
   incentiveOverride?: number;
   hraOverride?: number;
+  mealAllowanceOverride?: number;
   sundayPenaltyOverride?: number;
   grossSalary?: number;
   netSalary?: number;
@@ -39,7 +40,7 @@ const SalaryManagement: React.FC<SalaryManagementProps> = ({
   const [saving, setSaving] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const salaryCategories = settingsService.getSalaryCategories();
-  const customCategories = salaryCategories.filter(c => !['basic', 'incentive', 'hra'].includes(c.id));
+  const customCategories = salaryCategories.filter(c => !['basic', 'incentive', 'hra', 'meal_allowance'].includes(c.id));
 
   const activeStaff = staff.filter(member => {
     if (!member.isActive) return false;
@@ -139,9 +140,10 @@ const SalaryManagement: React.FC<SalaryManagementProps> = ({
       const basicVal = detail?.basicEarned ?? 0;
       const incentiveVal = detail?.incentiveEarned ?? 0;
       const hraVal = detail?.hraEarned ?? 0;
+      const mealAllowanceVal = detail?.mealAllowance ?? 0;
       const sundayPenaltyVal = detail?.sundayPenalty ?? 0;
 
-      const grossSalary = roundToNearest10(basicVal + incentiveVal + hraVal);
+      const grossSalary = roundToNearest10(basicVal + incentiveVal + hraVal + mealAllowanceVal);
       const netSalary = roundToNearest10(grossSalary - deduction - sundayPenaltyVal);
       const newAdvance = roundToNearest10(oldAdv + curAdv - deduction);
 
@@ -152,6 +154,7 @@ const SalaryManagement: React.FC<SalaryManagementProps> = ({
         basicOverride: basicVal,
         incentiveOverride: incentiveVal,
         hraOverride: hraVal,
+        mealAllowanceOverride: mealAllowanceVal,
         sundayPenaltyOverride: sundayPenaltyVal,
         grossSalary: grossSalary,
         netSalary: netSalary,
@@ -223,13 +226,14 @@ const SalaryManagement: React.FC<SalaryManagementProps> = ({
     const basicVal = updated.basicOverride || 0;
     const incentiveVal = updated.incentiveOverride || 0;
     const hraVal = updated.hraOverride || 0;
+    const mealAllowanceVal = updated.mealAllowanceOverride || 0;
     const sundayPenaltyVal = updated.sundayPenaltyOverride || 0;
     const oldAdv = updated.oldAdvance || 0;
     const curAdv = updated.currentAdvance || 0;
     const deduction = updated.deduction || 0;
 
-    // Gross = Basic + Incentive + HRA
-    updated.grossSalary = roundToNearest10(basicVal + incentiveVal + hraVal);
+    // Gross = Basic + Incentive + HRA + Meal Allowance
+    updated.grossSalary = roundToNearest10(basicVal + incentiveVal + hraVal + mealAllowanceVal);
     // Net = Gross - Deduction - Sunday Penalty
     updated.netSalary = roundToNearest10(updated.grossSalary - deduction - sundayPenaltyVal);
     // New Adv = Old Adv + Cur Adv - Deduction
@@ -500,7 +504,9 @@ const SalaryManagement: React.FC<SalaryManagementProps> = ({
                 <th className="px-2 md:px-4 py-3 md:py-4 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Deduction</th>
                 <th className="px-2 md:px-4 py-3 md:py-4 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Basic</th>
                 <th className="px-2 md:px-4 py-3 md:py-4 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Incentive</th>
-                <th className="px-2 md:px-4 py-3 md:py-4 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">HRA</th>{customCategories.map(cat => (<th key={cat.id} className="px-2 md:px-4 py-3 md:py-4 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">{cat.name}</th>))}
+                <th className="px-2 md:px-4 py-3 md:py-4 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">HRA</th>
+                <th className="px-2 md:px-4 py-3 md:py-4 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Meal Allowance</th>
+                {customCategories.map(cat => (<th key={cat.id} className="px-2 md:px-4 py-3 md:py-4 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">{cat.name}</th>))}
                 <th className="px-2 md:px-4 py-3 md:py-4 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Sun Penalty</th>
                 <th className="px-2 md:px-4 py-3 md:py-4 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Gross</th>
                 <th className="px-2 md:px-4 py-3 md:py-4 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Net Salary</th>
@@ -616,6 +622,19 @@ const SalaryManagement: React.FC<SalaryManagementProps> = ({
                         />
                       ) : (
                         <span className="text-gray-900">₹{detail.hraEarned}</span>
+                      )}
+                    </td>
+                    {/* Meal Allowance - Editable */}
+                    <td className="px-2 md:px-4 py-3 whitespace-nowrap text-center">
+                      {editMode ? (
+                        <input
+                          type="number"
+                          value={tempData?.mealAllowanceOverride || 0}
+                          onChange={(e) => updateTempAdvance(detail.staffId, 'mealAllowanceOverride', Number(e.target.value))}
+                          className="w-16 md:w-20 px-1 md:px-2 py-1 text-xs border rounded text-center"
+                        />
+                      ) : (
+                        <span className="text-gray-900">₹{detail.mealAllowance}</span>
                       )}
                     </td>
                     {/* Sunday Penalty - Editable */}

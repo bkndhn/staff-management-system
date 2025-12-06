@@ -246,9 +246,10 @@ export const calculateSalary = (
 
   // Calculate supplements
   const supplementsTotal = staff.salarySupplements ? Object.values(staff.salarySupplements).reduce((a, b) => a + b, 0) : 0;
+  const mealAllowance = staff.mealAllowance || 0;
 
   // Gross salary calculation
-  const grossSalary = roundToNearest10(basicEarned + incentiveEarned + hraEarned + supplementsTotal);
+  const grossSalary = roundToNearest10(basicEarned + incentiveEarned + hraEarned + supplementsTotal + mealAllowance);
 
   // Advance and deduction handling with carry-forward
   const oldAdv = advances?.oldAdvance || getPreviousMonthAdvance(staff.id, allAdvances, currentMonth, currentYear);
@@ -276,6 +277,7 @@ export const calculateSalary = (
     incentiveEarned: roundToNearest10(incentiveEarned),
     hraEarned: roundToNearest10(hraEarned),
     sundayPenalty: roundToNearest10(sundayPenalty),
+    mealAllowance: roundToNearest10(mealAllowance),
     grossSalary,
     newAdv,
     netSalary,

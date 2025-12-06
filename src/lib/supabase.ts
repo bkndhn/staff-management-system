@@ -14,17 +14,15 @@ if (!isSupabaseConfigured) {
 }
 
 // Create a dummy client if env vars are missing (prevents app crash)
-// The app will still render and show an error message to the user
 export const supabase = isSupabaseConfigured
   ? createClient(supabaseUrl, supabaseAnonKey)
-  : createClient('https://placeholder.supabase.co', 'placeholder-key');
+  : createClient('https://placeholder.supabase.co', 'placeholder');
 
-// Database types
 export interface DatabaseStaff {
   id: string;
   name: string;
-  location: 'Big Shop' | 'Small Shop' | 'Godown';
-  type: 'full-time' | 'part-time';
+  location: string;
+  type: string;
   experience: string;
   basic_salary: number;
   incentive: number;
@@ -34,31 +32,29 @@ export interface DatabaseStaff {
   is_active: boolean;
   sunday_penalty: boolean;
   salary_calculation_days: number;
-  salary_supplements?: Record<string, number>;
-  display_order?: number;
-  created_at: string;
-  updated_at: string;
+  salary_supplements: Record<string, number>;
+  meal_allowance: number;
+  display_order: number;
+  created_at?: string;
+  updated_at?: string;
 }
 
 export interface DatabaseAttendance {
   id: string;
   staff_id: string;
   date: string;
-  status: 'Present' | 'Half Day' | 'Absent';
-  attendance_value: number;
-  is_sunday?: boolean;
+  status: string;
+  created_at: string;
+  attendance_value?: number;
   is_part_time?: boolean;
   staff_name?: string;
-  shift?: 'Morning' | 'Evening' | 'Both';
   location?: string;
+  shift?: string;
   salary?: number;
   salary_override?: boolean;
-  arrival_time?: string;
-  leaving_time?: string;
-  created_at: string;
 }
 
-export interface DatabaseAdvance {
+export interface DatabaseAdvanceDeduction {
   id: string;
   staff_id: string;
   month: number;

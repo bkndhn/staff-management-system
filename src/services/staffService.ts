@@ -52,20 +52,9 @@ export const staffService = {
       updated_at: new Date().toISOString()
     };
 
-    // Map each camelCase property to its snake_case equivalent
-    if (updates.name !== undefined) dbUpdates.name = updates.name;
-    if (updates.location !== undefined) dbUpdates.location = updates.location;
-    if (updates.type !== undefined) dbUpdates.type = updates.type;
-    if (updates.experience !== undefined) dbUpdates.experience = updates.experience;
-    if (updates.basicSalary !== undefined) dbUpdates.basic_salary = updates.basicSalary;
-    if (updates.incentive !== undefined) dbUpdates.incentive = updates.incentive;
-    if (updates.hra !== undefined) dbUpdates.hra = updates.hra;
-    if (updates.totalSalary !== undefined) dbUpdates.total_salary = updates.totalSalary;
-    if (updates.joinedDate !== undefined) dbUpdates.joined_date = updates.joinedDate;
-    if (updates.isActive !== undefined) dbUpdates.is_active = updates.isActive;
-    if (updates.sundayPenalty !== undefined) dbUpdates.sunday_penalty = updates.sundayPenalty;
-    if (updates.salaryCalculationDays !== undefined) dbUpdates.salary_calculation_days = updates.salaryCalculationDays;
     if (updates.displayOrder !== undefined) (dbUpdates as any).display_order = updates.displayOrder;
+    if (updates.salarySupplements !== undefined) (dbUpdates as any).salary_supplements = updates.salarySupplements;
+    if (updates.mealAllowance !== undefined) (dbUpdates as any).meal_allowance = updates.mealAllowance;
 
     const { data, error } = await supabase
       .from('staff')
@@ -138,6 +127,7 @@ export const staffService = {
       sundayPenalty: dbStaff.sunday_penalty ?? true,
       salaryCalculationDays: dbStaff.salary_calculation_days || 30,
       salarySupplements: dbStaff.salary_supplements || {},
+      mealAllowance: dbStaff.meal_allowance || 0,
       displayOrder: dbStaff.display_order
     };
   },
@@ -156,7 +146,8 @@ export const staffService = {
       is_active: staff.isActive,
       sunday_penalty: staff.sundayPenalty ?? true,
       salary_calculation_days: staff.salaryCalculationDays || 30,
-      salary_supplements: staff.salarySupplements || {}
+      salary_supplements: staff.salarySupplements || {},
+      meal_allowance: staff.mealAllowance || 0
     };
   }
 };

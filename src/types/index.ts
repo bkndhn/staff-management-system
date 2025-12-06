@@ -1,35 +1,6 @@
-export interface Staff {
-  id: string;
-  name: string;
-  location: string;
-  type: 'full-time' | 'part-time';
-  experience: string;
-  basicSalary: number;
-  incentive: number;
-  hra: number;
-  totalSalary: number;
-  joinedDate: string;
-  isActive: boolean;
-  initialSalary?: number; // Store first salary for hike tracking
-  salarySupplements?: Record<string, number>; // For custom salary categories
-  sundayPenalty: boolean;
-  salaryCalculationDays?: number; // Number of days to use for salary calculation (for prorated salaries)
-  displayOrder?: number; // For custom display ordering
-}
-
-export interface SalaryCategory {
-  id: string;
-  name: string;
-  key: string;
-}
-
-export interface PartTimeStaff {
-  id: string;
-  name: string;
-  location: string;
-  shift: 'Morning' | 'Evening' | 'Both';
-  ratePerDay: number;
-  ratePerShift: number;
+shift: 'Morning' | 'Evening' | 'Both';
+ratePerDay: number;
+ratePerShift: number;
 }
 
 export interface Attendance {
@@ -65,6 +36,7 @@ export interface SalaryDetail {
   hraEarned: number;
   salarySupplements?: Record<string, number>;
   sundayPenalty: number;
+  mealAllowance: number;
   grossSalary: number;
   newAdv: number;
   netSalary: number;
