@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Attendance, PartTimeSalaryDetail, Staff } from '../types';
-import { Clock, Plus, Download, Calendar, DollarSign, Edit2, Save, X, FileSpreadsheet, Trash2, Settings, Search } from 'lucide-react';
+import { Clock, Plus, Download, Calendar, DollarSign, Edit2, Save, X, FileSpreadsheet, Trash2, Settings, Search, CheckCircle, RotateCcw } from 'lucide-react';
 import { calculatePartTimeSalary, getPartTimeDailySalary, isSunday, getCurrencyBreakdown } from '../utils/salaryCalculations';
 import { exportSalaryToExcel, exportSalaryPDF, exportPartTimeSalaryPDF } from '../utils/exportUtils';
 import { settingsService } from '../services/settingsService';
@@ -115,6 +115,44 @@ const PartTimeStaff: React.FC<PartTimeStaffProps> = ({
     const [showSettings, setShowSettings] = useState(false);
     const [partTimeRates, setPartTimeRates] = useState(() => settingsService.getPartTimeRates());
     const [searchQuery, setSearchQuery] = useState('');
+    const [settlementFilter, setSettlementFilter] = useState<'all' | 'settled' | 'unsettled'>('all');
+
+    // Settlement tracking - stored in localStorage
+    const [settledSalaries, setSettledSalaries] = useState<Set<string>>(() => {
+        const stored = localStorage.getItem('settledPartTimeSalaries');
+        return stored ? new Set(JSON.parse(stored)) : new Set();
+    });
+
+    // Generate unique key for settlement tracking
+    const getSettlementKey = (staffName: string, location: string) => {
+        let periodKey = '';
+        if (reportType === 'monthly') {
+            periodKey = `monthly-${selectedYear}-${selectedMonth}`;
+        } else if (reportType === 'weekly') {
+            periodKey = `weekly-${selectedYear}-${selectedMonth}-${selectedWeek}`;
+        } else {
+            periodKey = `range-${dateRange.start}-${dateRange.end}`;
+        }
+        return `${staffName}-${location}-${periodKey}`;
+    };
+
+    // Check if a salary is settled
+    const isSettled = (staffName: string, location: string) => {
+        return settledSalaries.has(getSettlementKey(staffName, location));
+    };
+
+    // Toggle settlement status
+    const toggleSettlement = (staffName: string, location: string) => {
+        const key = getSettlementKey(staffName, location);
+        const newSettled = new Set(settledSalaries);
+        if (newSettled.has(key)) {
+            newSettled.delete(key);
+        } else {
+            newSettled.add(key);
+        }
+        setSettledSalaries(newSettled);
+        localStorage.setItem('settledPartTimeSalaries', JSON.stringify([...newSettled]));
+    };
 
     // Bulk add state
     const [bulkStaffList, setBulkStaffList] = useState<{
@@ -440,7 +478,12 @@ const PartTimeStaff: React.FC<PartTimeStaffProps> = ({
         const locationMatch = reportLocationFilter.includes('All') || reportLocationFilter.some(loc => salary.location.includes(loc));
         // Filter by search query (case-insensitive)
         const searchMatch = !searchQuery.trim() || salary.staffName.toLowerCase().includes(searchQuery.toLowerCase().trim());
-        return locationMatch && searchMatch;
+        // Filter by settlement status
+        const settled = isSettled(salary.staffName, salary.location);
+        const settlementMatch = settlementFilter === 'all' ||
+            (settlementFilter === 'settled' && settled) ||
+            (settlementFilter === 'unsettled' && !settled);
+        return locationMatch && searchMatch && settlementMatch;
     });
 
     // Filter salaries based on selection if any are selected
@@ -1134,6 +1177,17 @@ const PartTimeStaff: React.FC<PartTimeStaffProps> = ({
                             <option value="dateRange">Date Range</option>
                         </select>
 
+                        {/* Settlement Filter */}
+                        <select
+                            value={settlementFilter}
+                            onChange={(e) => setSettlementFilter(e.target.value as 'all' | 'settled' | 'unsettled')}
+                            className="px-2 md:px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent text-sm"
+                        >
+                            <option value="all">All Status</option>
+                            <option value="settled">✓ Settled</option>
+                            <option value="unsettled">○ Not Settled</option>
+                        </select>
+
                         {reportType === 'monthly' && (
                             <div className="flex flex-wrap items-center gap-2">
                                 <select
@@ -1313,113 +1367,139 @@ const PartTimeStaff: React.FC<PartTimeStaffProps> = ({
                                     </>
                                 )}
                                 <th className="px-3 md:px-6 py-3 md:py-4 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Total</th>
+                                <th className="px-3 md:px-6 py-3 md:py-4 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
                             </tr>
                         </thead>
                         <tbody className="bg-white divide-y divide-gray-200">
                             {partTimeSalaries.length === 0 ? (
                                 <tr>
-                                    <td colSpan={reportType === 'weekly' ? 12 : 7} className="px-6 py-4 text-center text-gray-500">
+                                    <td colSpan={reportType === 'weekly' ? 13 : 8} className="px-6 py-4 text-center text-gray-500">
                                         No records found for the selected period
                                     </td>
                                 </tr>
                             ) : (
-                                partTimeSalaries.map((salary, index) => (
-                                    <tr key={`${salary.staffName}-${index}`} className="hover:bg-gray-50 text-xs md:text-sm">
-                                        <td className="px-3 md:px-6 py-4 whitespace-nowrap">
-                                            <input
-                                                type="checkbox"
-                                                checked={selectedStaff.has(`${salary.staffName}-${salary.location}`)}
-                                                onChange={(e) => {
-                                                    const newSelection = new Set(selectedStaff);
-                                                    const key = `${salary.staffName}-${salary.location}`;
-                                                    if (e.target.checked) {
-                                                        newSelection.add(key);
-                                                    } else {
-                                                        newSelection.delete(key);
-                                                    }
-                                                    setSelectedStaff(newSelection);
-                                                }}
-                                                className="rounded border-gray-300 text-purple-600 focus:ring-purple-500"
-                                            />
-                                        </td>
-                                        <td className="px-3 md:px-6 py-4 whitespace-nowrap text-gray-900">{index + 1}</td>
-                                        <td className="sticky left-0 z-10 bg-white px-3 md:px-6 py-4 whitespace-nowrap font-medium text-gray-900 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]">
-                                            {salary.staffName}
-                                        </td>
-                                        <td className="px-3 md:px-6 py-4 whitespace-nowrap">
-                                            <span className="px-2 py-1 text-xs font-semibold rounded-full bg-purple-100 text-purple-800">
-                                                {salary.location}
-                                            </span>
-                                        </td>
-                                        {reportType === 'weekly' && (() => {
-                                            const weekData = getWeeksInMonth(selectedYear, selectedMonth)[selectedWeek];
-                                            if (!weekData) return null;
+                                partTimeSalaries.map((salary, index) => {
+                                    const staffSettled = isSettled(salary.staffName, salary.location);
+                                    return (
+                                        <tr key={`${salary.staffName}-${index}`} className={`text-xs md:text-sm ${staffSettled ? 'bg-green-50 hover:bg-green-100' : 'hover:bg-gray-50'}`}>
+                                            <td className="px-3 md:px-6 py-4 whitespace-nowrap">
+                                                <input
+                                                    type="checkbox"
+                                                    checked={selectedStaff.has(`${salary.staffName}-${salary.location}`)}
+                                                    onChange={(e) => {
+                                                        const newSelection = new Set(selectedStaff);
+                                                        const key = `${salary.staffName}-${salary.location}`;
+                                                        if (e.target.checked) {
+                                                            newSelection.add(key);
+                                                        } else {
+                                                            newSelection.delete(key);
+                                                        }
+                                                        setSelectedStaff(newSelection);
+                                                    }}
+                                                    className="rounded border-gray-300 text-purple-600 focus:ring-purple-500"
+                                                />
+                                            </td>
+                                            <td className="px-3 md:px-6 py-4 whitespace-nowrap text-gray-900">{index + 1}</td>
+                                            <td className="sticky left-0 z-10 bg-white px-3 md:px-6 py-4 whitespace-nowrap font-medium text-gray-900 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]">
+                                                {salary.staffName}
+                                            </td>
+                                            <td className="px-3 md:px-6 py-4 whitespace-nowrap">
+                                                <span className="px-2 py-1 text-xs font-semibold rounded-full bg-purple-100 text-purple-800">
+                                                    {salary.location}
+                                                </span>
+                                            </td>
+                                            {reportType === 'weekly' && (() => {
+                                                const weekData = getWeeksInMonth(selectedYear, selectedMonth)[selectedWeek];
+                                                if (!weekData) return null;
 
-                                            const dailySalaries: Record<string, number> = {};
+                                                const dailySalaries: Record<string, number> = {};
 
-                                            // Map all attendance to date strings (YYYY-MM-DD)
-                                            salary.weeklyBreakdown.flatMap(week => week.days).forEach(day => {
-                                                const dateKey = day.date; // Already in YYYY-MM-DD format
-                                                dailySalaries[dateKey] = day.salary;
-                                            });
+                                                // Map all attendance to date strings (YYYY-MM-DD)
+                                                salary.weeklyBreakdown.flatMap(week => week.days).forEach(day => {
+                                                    const dateKey = day.date; // Already in YYYY-MM-DD format
+                                                    dailySalaries[dateKey] = day.salary;
+                                                });
 
-                                            // Generate 7 columns for the week
-                                            return Array.from({ length: 7 }, (_, i) => {
-                                                const currentDate = new Date(weekData.startDate);
-                                                currentDate.setDate(currentDate.getDate() + i);
+                                                // Generate 7 columns for the week
+                                                return Array.from({ length: 7 }, (_, i) => {
+                                                    const currentDate = new Date(weekData.startDate);
+                                                    currentDate.setDate(currentDate.getDate() + i);
 
-                                                // Create local date string manually to avoid timezone shifts
-                                                const year = currentDate.getFullYear();
-                                                const month = String(currentDate.getMonth() + 1).padStart(2, '0');
-                                                const day = String(currentDate.getDate()).padStart(2, '0');
-                                                const dateKey = `${year}-${month}-${day}`;
+                                                    // Create local date string manually to avoid timezone shifts
+                                                    const year = currentDate.getFullYear();
+                                                    const month = String(currentDate.getMonth() + 1).padStart(2, '0');
+                                                    const day = String(currentDate.getDate()).padStart(2, '0');
+                                                    const dateKey = `${year}-${month}-${day}`;
 
-                                                const salary = dailySalaries[dateKey];
+                                                    const salary = dailySalaries[dateKey];
 
-                                                return (
-                                                    <td key={i} className="w-16 min-w-[64px] px-1 py-4 text-center text-gray-900 font-semibold">
-                                                        {salary ? `₹${salary}` : '-'}
+                                                    return (
+                                                        <td key={i} className="w-16 min-w-[64px] px-1 py-4 text-center text-gray-900 font-semibold">
+                                                            {salary ? `₹${salary}` : '-'}
+                                                        </td>
+                                                    );
+                                                });
+                                            })()}
+                                            {reportType !== 'weekly' && (
+                                                <>
+                                                    <td className="px-3 md:px-6 py-4 text-left text-gray-900">
+                                                        <div className="flex flex-col gap-1">
+                                                            {salary.weeklyBreakdown.flatMap(week => week.days).map((day, dayIndex) => (
+                                                                <div key={dayIndex} className="text-xs">
+                                                                    {new Date(day.date).toLocaleDateString('en-GB', {
+                                                                        day: '2-digit',
+                                                                        month: '2-digit',
+                                                                        year: '2-digit'
+                                                                    })} - ₹{day.salary}
+                                                                </div>
+                                                            ))}
+                                                        </div>
                                                     </td>
-                                                );
-                                            });
-                                        })()}
-                                        {reportType !== 'weekly' && (
-                                            <>
-                                                <td className="px-3 md:px-6 py-4 text-left text-gray-900">
-                                                    <div className="flex flex-col gap-1">
-                                                        {salary.weeklyBreakdown.flatMap(week => week.days).map((day, dayIndex) => (
-                                                            <div key={dayIndex} className="text-xs">
-                                                                {new Date(day.date).toLocaleDateString('en-GB', {
-                                                                    day: '2-digit',
-                                                                    month: '2-digit',
-                                                                    year: '2-digit'
-                                                                })} - ₹{day.salary}
-                                                            </div>
-                                                        ))}
-                                                    </div>
-                                                </td>
-                                                <td className="px-3 md:px-6 py-4 whitespace-nowrap text-center">
-                                                    <div className="flex flex-col gap-1">
-                                                        {salary.weeklyBreakdown.map((week, wIndex) => (
-                                                            <div key={wIndex} className="text-xs text-gray-500">
-                                                                Week {week.week}: ₹{week.weekTotal}
-                                                            </div>
-                                                        ))}
-                                                    </div>
-                                                </td>
-                                            </>
-                                        )}
-                                        <td className="px-3 md:px-6 py-4 whitespace-nowrap text-right font-bold text-green-600">
-                                            ₹{salary.totalEarnings}
-                                        </td>
-                                    </tr>
-                                ))
+                                                    <td className="px-3 md:px-6 py-4 whitespace-nowrap text-center">
+                                                        <div className="flex flex-col gap-1">
+                                                            {salary.weeklyBreakdown.map((week, wIndex) => (
+                                                                <div key={wIndex} className="text-xs text-gray-500">
+                                                                    Week {week.week}: ₹{week.weekTotal}
+                                                                </div>
+                                                            ))}
+                                                        </div>
+                                                    </td>
+                                                </>
+                                            )}
+                                            <td className="px-3 md:px-6 py-4 whitespace-nowrap text-right font-bold text-green-600">
+                                                ₹{salary.totalEarnings}
+                                            </td>
+                                            <td className="px-3 md:px-6 py-4 whitespace-nowrap text-center">
+                                                {staffSettled ? (
+                                                    <button
+                                                        onClick={() => toggleSettlement(salary.staffName, salary.location)}
+                                                        className="inline-flex items-center gap-1 px-3 py-1.5 bg-green-100 text-green-700 rounded-lg hover:bg-green-200 transition-colors text-xs font-medium"
+                                                        title="Click to revert settlement"
+                                                    >
+                                                        <CheckCircle size={14} />
+                                                        <span>Settled</span>
+                                                        <RotateCcw size={12} className="ml-1 opacity-60" />
+                                                    </button>
+                                                ) : (
+                                                    <button
+                                                        onClick={() => toggleSettlement(salary.staffName, salary.location)}
+                                                        className="inline-flex items-center gap-1 px-3 py-1.5 bg-gray-100 text-gray-600 rounded-lg hover:bg-purple-100 hover:text-purple-700 transition-colors text-xs font-medium"
+                                                        title="Click to mark as settled"
+                                                    >
+                                                        <span>Settle</span>
+                                                    </button>
+                                                )}
+                                            </td>
+                                        </tr>
+                                    );
+                                })
                             )}
                         </tbody>
                         <tfoot className="bg-gray-50 font-bold">
                             <tr>
-                                <td colSpan={reportType === 'weekly' ? (getWeeksInMonth(selectedYear, selectedMonth)[selectedWeek] ? 3 + (getWeeksInMonth(selectedYear, selectedMonth)[selectedWeek].endDay - getWeeksInMonth(selectedYear, selectedMonth)[selectedWeek].startDay + 1) : 10) : 5} className="px-3 md:px-6 py-4 text-right text-gray-900">Total Payout:</td>
+                                <td colSpan={reportType === 'weekly' ? (getWeeksInMonth(selectedYear, selectedMonth)[selectedWeek] ? 4 + (getWeeksInMonth(selectedYear, selectedMonth)[selectedWeek].endDay - getWeeksInMonth(selectedYear, selectedMonth)[selectedWeek].startDay + 1) : 11) : 6} className="px-3 md:px-6 py-4 text-right text-gray-900">Total Payout:</td>
                                 <td className="px-3 md:px-6 py-4 text-right text-green-600">₹{totalPartTimeEarnings}</td>
+                                <td></td>
                             </tr>
                         </tfoot>
                     </table>
