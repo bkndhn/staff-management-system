@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Attendance, PartTimeSalaryDetail, Staff } from '../types';
-import { Clock, Plus, Download, Calendar, DollarSign, Edit2, Save, X, FileSpreadsheet, Trash2, Settings } from 'lucide-react';
+import { Clock, Plus, Download, Calendar, DollarSign, Edit2, Save, X, FileSpreadsheet, Trash2, Settings, Search } from 'lucide-react';
 import { calculatePartTimeSalary, getPartTimeDailySalary, isSunday, getCurrencyBreakdown } from '../utils/salaryCalculations';
 import { exportSalaryToExcel, exportSalaryPDF, exportPartTimeSalaryPDF } from '../utils/exportUtils';
 import { settingsService } from '../services/settingsService';
@@ -114,6 +114,7 @@ const PartTimeStaff: React.FC<PartTimeStaffProps> = ({
     });
     const [showSettings, setShowSettings] = useState(false);
     const [partTimeRates, setPartTimeRates] = useState(() => settingsService.getPartTimeRates());
+    const [searchQuery, setSearchQuery] = useState('');
 
     // Bulk add state
     const [bulkStaffList, setBulkStaffList] = useState<{
@@ -435,8 +436,11 @@ const PartTimeStaff: React.FC<PartTimeStaffProps> = ({
     };
 
     const partTimeSalaries = calculatePartTimeSalaries().filter(salary => {
-        if (reportLocationFilter.includes('All')) return true;
-        return reportLocationFilter.some(loc => salary.location.includes(loc));
+        // Filter by location
+        const locationMatch = reportLocationFilter.includes('All') || reportLocationFilter.some(loc => salary.location.includes(loc));
+        // Filter by search query (case-insensitive)
+        const searchMatch = !searchQuery.trim() || salary.staffName.toLowerCase().includes(searchQuery.toLowerCase().trim());
+        return locationMatch && searchMatch;
     });
 
     // Filter salaries based on selection if any are selected
@@ -1196,6 +1200,35 @@ const PartTimeStaff: React.FC<PartTimeStaffProps> = ({
                             </>
                         )}
                     </div>
+                </div>
+
+                {/* Search Bar */}
+                <div className="mb-4">
+                    <div className="relative w-full md:w-96">
+                        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                            <Search className="text-gray-400" size={18} />
+                        </div>
+                        <input
+                            type="text"
+                            placeholder="Search staff by name..."
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                            className="w-full pl-10 pr-10 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent text-sm"
+                        />
+                        {searchQuery && (
+                            <button
+                                onClick={() => setSearchQuery('')}
+                                className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600"
+                            >
+                                <X size={16} />
+                            </button>
+                        )}
+                    </div>
+                    {searchQuery && (
+                        <p className="mt-2 text-sm text-gray-500">
+                            Showing {partTimeSalaries.length} result(s) for "{searchQuery}"
+                        </p>
+                    )}
                 </div>
 
                 <div className="overflow-x-auto">
