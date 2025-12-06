@@ -123,35 +123,185 @@ const PartTimeStaff: React.FC<PartTimeStaffProps> = ({
         return stored ? new Set(JSON.parse(stored)) : new Set();
     });
 
-    // Generate unique key for settlement tracking
-    const getSettlementKey = (staffName: string, location: string) => {
-        let periodKey = '';
-        if (reportType === 'monthly') {
-            periodKey = `monthly-${selectedYear}-${selectedMonth}`;
-        } else if (reportType === 'weekly') {
-            periodKey = `weekly-${selectedYear}-${selectedMonth}-${selectedWeek}`;
-        } else {
-            periodKey = `range-${dateRange.start}-${dateRange.end}`;
-        }
-        return `${staffName}-${location}-${periodKey}`;
+    // Generate unique key for settlement tracking (always uses weekly key for consistency)
+    const getWeeklySettlementKey = (staffName: string, location: string, year: number, month: number, week: number) => {
+        return `${staffName}-${location}-weekly-${year}-${month}-${week}`;
     };
 
-    // Check if a salary is settled
+    // Get settlement status for current view (returns detailed info for monthly/dateRange)
+    const getSettlementStatus = (staffName: string, location: string) => {
+        if (reportType === 'weekly') {
+            // For weekly view, just check if this specific week is settled
+            const key = getWeeklySettlementKey(staffName, location, selectedYear, selectedMonth, selectedWeek);
+            const isSettled = settledSalaries.has(key);
+            return {
+                isFullySettled: isSettled,
+                isPartiallySettled: false,
+                settledWeeks: isSettled ? [selectedWeek] : [],
+                totalWeeks: 1,
+                settledCount: isSettled ? 1 : 0
+            };
+        } else if (reportType === 'monthly') {
+            // For monthly view, check all weeks in the month
+            const weeks = getWeeksInMonthForSettlement(selectedYear, selectedMonth);
+            const settledWeeks: number[] = [];
+            weeks.forEach((_, weekIndex) => {
+                const key = getWeeklySettlementKey(staffName, location, selectedYear, selectedMonth, weekIndex);
+                if (settledSalaries.has(key)) {
+                    settledWeeks.push(weekIndex);
+                }
+            });
+            return {
+                isFullySettled: settledWeeks.length === weeks.length && weeks.length > 0,
+                isPartiallySettled: settledWeeks.length > 0 && settledWeeks.length < weeks.length,
+                settledWeeks,
+                totalWeeks: weeks.length,
+                settledCount: settledWeeks.length
+            };
+        } else {
+            // For date range, find overlapping weeks and check their settlement
+            const startDate = new Date(dateRange.start);
+            const endDate = new Date(dateRange.end);
+            const settledWeeks: number[] = [];
+            let totalWeeks = 0;
+
+            // Check each month in the range
+            let currentDate = new Date(startDate.getFullYear(), startDate.getMonth(), 1);
+            while (currentDate <= endDate) {
+                const year = currentDate.getFullYear();
+                const month = currentDate.getMonth();
+                const weeks = getWeeksInMonthForSettlement(year, month);
+
+                weeks.forEach((week, weekIndex) => {
+                    // Check if week overlaps with date range
+                    if (week.endDate >= startDate && week.startDate <= endDate) {
+                        totalWeeks++;
+                        const key = getWeeklySettlementKey(staffName, location, year, month, weekIndex);
+                        if (settledSalaries.has(key)) {
+                            settledWeeks.push(weekIndex);
+                        }
+                    }
+                });
+
+                // Move to next month
+                currentDate.setMonth(currentDate.getMonth() + 1);
+            }
+
+            return {
+                isFullySettled: totalWeeks > 0 && settledWeeks.length === totalWeeks,
+                isPartiallySettled: settledWeeks.length > 0 && settledWeeks.length < totalWeeks,
+                settledWeeks,
+                totalWeeks,
+                settledCount: settledWeeks.length
+            };
+        }
+    };
+
+    // Simple check for backward compatibility
     const isSettled = (staffName: string, location: string) => {
-        return settledSalaries.has(getSettlementKey(staffName, location));
+        const status = getSettlementStatus(staffName, location);
+        return status.isFullySettled;
     };
 
-    // Toggle settlement status
+    // Check if partially settled (for different highlighting)
+    const isPartiallySettled = (staffName: string, location: string) => {
+        const status = getSettlementStatus(staffName, location);
+        return status.isPartiallySettled;
+    };
+
+    // Toggle settlement status (always toggles weekly key)
     const toggleSettlement = (staffName: string, location: string) => {
-        const key = getSettlementKey(staffName, location);
-        const newSettled = new Set(settledSalaries);
-        if (newSettled.has(key)) {
-            newSettled.delete(key);
+        if (reportType === 'weekly') {
+            // Toggle single week
+            const key = getWeeklySettlementKey(staffName, location, selectedYear, selectedMonth, selectedWeek);
+            const newSettled = new Set(settledSalaries);
+            if (newSettled.has(key)) {
+                newSettled.delete(key);
+            } else {
+                newSettled.add(key);
+            }
+            setSettledSalaries(newSettled);
+            localStorage.setItem('settledPartTimeSalaries', JSON.stringify([...newSettled]));
+        } else if (reportType === 'monthly') {
+            // Toggle all weeks in month
+            const weeks = getWeeksInMonthForSettlement(selectedYear, selectedMonth);
+            const newSettled = new Set(settledSalaries);
+            const status = getSettlementStatus(staffName, location);
+
+            if (status.isFullySettled) {
+                // Unsettle all weeks
+                weeks.forEach((_, weekIndex) => {
+                    const key = getWeeklySettlementKey(staffName, location, selectedYear, selectedMonth, weekIndex);
+                    newSettled.delete(key);
+                });
+            } else {
+                // Settle all weeks
+                weeks.forEach((_, weekIndex) => {
+                    const key = getWeeklySettlementKey(staffName, location, selectedYear, selectedMonth, weekIndex);
+                    newSettled.add(key);
+                });
+            }
+            setSettledSalaries(newSettled);
+            localStorage.setItem('settledPartTimeSalaries', JSON.stringify([...newSettled]));
         } else {
-            newSettled.add(key);
+            // Date range: toggle all overlapping weeks
+            const startDate = new Date(dateRange.start);
+            const endDate = new Date(dateRange.end);
+            const newSettled = new Set(settledSalaries);
+            const status = getSettlementStatus(staffName, location);
+
+            let currentDate = new Date(startDate.getFullYear(), startDate.getMonth(), 1);
+            while (currentDate <= endDate) {
+                const year = currentDate.getFullYear();
+                const month = currentDate.getMonth();
+                const weeks = getWeeksInMonthForSettlement(year, month);
+
+                weeks.forEach((week, weekIndex) => {
+                    if (week.endDate >= startDate && week.startDate <= endDate) {
+                        const key = getWeeklySettlementKey(staffName, location, year, month, weekIndex);
+                        if (status.isFullySettled) {
+                            newSettled.delete(key);
+                        } else {
+                            newSettled.add(key);
+                        }
+                    }
+                });
+
+                currentDate.setMonth(currentDate.getMonth() + 1);
+            }
+            setSettledSalaries(newSettled);
+            localStorage.setItem('settledPartTimeSalaries', JSON.stringify([...newSettled]));
         }
-        setSettledSalaries(newSettled);
-        localStorage.setItem('settledPartTimeSalaries', JSON.stringify([...newSettled]));
+    };
+
+    // Helper version of getWeeksInMonth for settlement (doesn't require HTML render context)
+    const getWeeksInMonthForSettlement = (year: number, month: number) => {
+        const weeks: { startDate: Date; endDate: Date }[] = [];
+        const lastDayOfMonth = new Date(year, month + 1, 0).getDate();
+        let currentDay = 1;
+
+        while (currentDay <= lastDayOfMonth) {
+            const weekEndDay = currentDay + 6;
+            const startDate = new Date(year, month, currentDay);
+            let endDate: Date;
+
+            if (weekEndDay <= lastDayOfMonth) {
+                endDate = new Date(year, month, weekEndDay, 23, 59, 59, 999);
+            } else {
+                const daysIntoNextMonth = weekEndDay - lastDayOfMonth;
+                let endMonth = month + 1;
+                let endYear = year;
+                if (endMonth > 11) {
+                    endMonth = 0;
+                    endYear = year + 1;
+                }
+                endDate = new Date(endYear, endMonth, daysIntoNextMonth, 23, 59, 59, 999);
+            }
+
+            weeks.push({ startDate, endDate });
+            currentDay += 7;
+        }
+        return weeks;
     };
 
     // Bulk add state
@@ -478,11 +628,11 @@ const PartTimeStaff: React.FC<PartTimeStaffProps> = ({
         const locationMatch = reportLocationFilter.includes('All') || reportLocationFilter.some(loc => salary.location.includes(loc));
         // Filter by search query (case-insensitive)
         const searchMatch = !searchQuery.trim() || salary.staffName.toLowerCase().includes(searchQuery.toLowerCase().trim());
-        // Filter by settlement status
-        const settled = isSettled(salary.staffName, salary.location);
+        // Filter by settlement status (using getSettlementStatus for cross-view awareness)
+        const status = getSettlementStatus(salary.staffName, salary.location);
         const settlementMatch = settlementFilter === 'all' ||
-            (settlementFilter === 'settled' && settled) ||
-            (settlementFilter === 'unsettled' && !settled);
+            (settlementFilter === 'settled' && status.isFullySettled) ||
+            (settlementFilter === 'unsettled' && !status.isFullySettled);
         return locationMatch && searchMatch && settlementMatch;
     });
 
@@ -1379,9 +1529,20 @@ const PartTimeStaff: React.FC<PartTimeStaffProps> = ({
                                 </tr>
                             ) : (
                                 partTimeSalaries.map((salary, index) => {
-                                    const staffSettled = isSettled(salary.staffName, salary.location);
+                                    const settlementStatus = getSettlementStatus(salary.staffName, salary.location);
+                                    const staffSettled = settlementStatus.isFullySettled;
+                                    const staffPartial = settlementStatus.isPartiallySettled;
+
+                                    // Determine row background color
+                                    let rowBgClass = 'hover:bg-gray-50';
+                                    if (staffSettled) {
+                                        rowBgClass = 'bg-green-200 hover:bg-green-300';
+                                    } else if (staffPartial) {
+                                        rowBgClass = 'bg-yellow-100 hover:bg-yellow-200';
+                                    }
+
                                     return (
-                                        <tr key={`${salary.staffName}-${index}`} className={`text-xs md:text-sm ${staffSettled ? 'bg-green-50 hover:bg-green-100' : 'hover:bg-gray-50'}`}>
+                                        <tr key={`${salary.staffName}-${index}`} className={`text-xs md:text-sm ${rowBgClass}`}>
                                             <td className="px-3 md:px-6 py-4 whitespace-nowrap">
                                                 <input
                                                     type="checkbox"
@@ -1400,7 +1561,7 @@ const PartTimeStaff: React.FC<PartTimeStaffProps> = ({
                                                 />
                                             </td>
                                             <td className="px-3 md:px-6 py-4 whitespace-nowrap text-gray-900">{index + 1}</td>
-                                            <td className="sticky left-0 z-10 bg-white px-3 md:px-6 py-4 whitespace-nowrap font-medium text-gray-900 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]">
+                                            <td className={`sticky left-0 z-10 px-3 md:px-6 py-4 whitespace-nowrap font-medium text-gray-900 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)] ${staffSettled ? 'bg-green-200' : staffPartial ? 'bg-yellow-100' : 'bg-white'}`}>
                                                 {salary.staffName}
                                             </td>
                                             <td className="px-3 md:px-6 py-4 whitespace-nowrap">
@@ -1474,17 +1635,30 @@ const PartTimeStaff: React.FC<PartTimeStaffProps> = ({
                                                     <button
                                                         onClick={() => toggleSettlement(salary.staffName, salary.location)}
                                                         className="inline-flex items-center gap-1 px-3 py-1.5 bg-green-100 text-green-700 rounded-lg hover:bg-green-200 transition-colors text-xs font-medium"
-                                                        title="Click to revert settlement"
+                                                        title="Click to revert all weeks"
                                                     >
                                                         <CheckCircle size={14} />
                                                         <span>Settled</span>
                                                         <RotateCcw size={12} className="ml-1 opacity-60" />
                                                     </button>
+                                                ) : staffPartial ? (
+                                                    <div className="flex flex-col items-center gap-1">
+                                                        <button
+                                                            onClick={() => toggleSettlement(salary.staffName, salary.location)}
+                                                            className="inline-flex items-center gap-1 px-3 py-1.5 bg-yellow-100 text-yellow-700 rounded-lg hover:bg-yellow-200 transition-colors text-xs font-medium"
+                                                            title="Click to settle all remaining weeks"
+                                                        >
+                                                            <span>Partial ({settlementStatus.settledCount}/{settlementStatus.totalWeeks})</span>
+                                                        </button>
+                                                        <span className="text-[10px] text-gray-500">
+                                                            {settlementStatus.settledWeeks.map(w => `W${w + 1}`).join(', ')} ✓
+                                                        </span>
+                                                    </div>
                                                 ) : (
                                                     <button
                                                         onClick={() => toggleSettlement(salary.staffName, salary.location)}
                                                         className="inline-flex items-center gap-1 px-3 py-1.5 bg-gray-100 text-gray-600 rounded-lg hover:bg-purple-100 hover:text-purple-700 transition-colors text-xs font-medium"
-                                                        title="Click to mark as settled"
+                                                        title={reportType === 'weekly' ? 'Click to mark as settled' : 'Click to settle all weeks'}
                                                     >
                                                         <span>Settle</span>
                                                     </button>
