@@ -98,6 +98,14 @@ const StaffManagement: React.FC<StaffManagementProps> = ({
     setDragOverIndex(index);
   };
 
+  // Calculate total salary dynamically
+  const calculateMemberTotalSalary = (member: Staff) => {
+    let total = member.basicSalary + member.incentive + member.hra + (member.mealAllowance || 0);
+    const customCategories = salaryCategories.filter(c => !['basic', 'incentive', 'hra', 'meal_allowance'].includes(c.id));
+    total += customCategories.reduce((sum, cat) => sum + (member.salarySupplements?.[cat.id] || 0), 0);
+    return total;
+  };
+
   const handleDragLeave = () => {
     setDragOverIndex(null);
   };
@@ -145,8 +153,16 @@ const StaffManagement: React.FC<StaffManagementProps> = ({
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
+    const salaryCategories = settingsService.getSalaryCategories();
+    // Start with basic fields
+    let totalSalary = (formData.basicSalary || 0) + (formData.incentive || 0) + (formData.hra || 0) + (formData.mealAllowance || 0);
+
+    // Add custom categories (anything not basic, incentive, hra, meal_allowance)
+    const customCategories = salaryCategories.filter(c => !['basic', 'incentive', 'hra', 'meal_allowance'].includes(c.id));
+    totalSalary += customCategories.reduce((sum, cat) => sum + (formData.salarySupplements[cat.id] || 0), 0);
+
+    // Kept supplementsTotal just in case it's used elsewhere, otherwise remove if unused
     const supplementsTotal = Object.values(formData.salarySupplements).reduce((a, b) => a + b, 0);
-    const totalSalary = formData.basicSalary + formData.incentive + formData.hra + formData.mealAllowance + supplementsTotal;
     const experience = calculateExperience(formData.joinedDate);
 
     if (editingStaff) {
@@ -668,7 +684,7 @@ const StaffManagement: React.FC<StaffManagementProps> = ({
                         ₹{(member.salarySupplements?.[category.id] || 0).toLocaleString()}
                       </td>
                     ))}
-                    <td className="px-3 py-4 text-sm font-semibold text-green-600">₹{member.totalSalary.toLocaleString()}</td>
+                    <td className="px-3 py-4 text-sm font-semibold text-green-600">₹{calculateMemberTotalSalary(member).toLocaleString()}</td>
                     <td className="px-3 py-4">
                       <button
                         onClick={() => setShowSalaryHistory(member)}

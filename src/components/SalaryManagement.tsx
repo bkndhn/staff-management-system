@@ -4,6 +4,7 @@ import { DollarSign, Download, Users, Calendar, TrendingUp, Edit2, Save, X, File
 import { calculateAttendanceMetrics, calculateSalary, calculatePartTimeSalary, roundToNearest10 } from '../utils/salaryCalculations';
 import { exportSalaryToExcel, exportSalaryPDF } from '../utils/exportUtils';
 import { settingsService } from '../services/settingsService';
+import { salaryOverrideService } from '../services/salaryOverrideService';
 
 interface SalaryManagementProps {
   staff: Staff[];
@@ -40,7 +41,62 @@ const SalaryManagement: React.FC<SalaryManagementProps> = ({
   const [saving, setSaving] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const salaryCategories = settingsService.getSalaryCategories();
+
   const customCategories = salaryCategories.filter(c => !['basic', 'incentive', 'hra', 'meal_allowance'].includes(c.id));
+
+  // Load monthly overrides
+  React.useEffect(() => {
+    const loadOverrides = async () => {
+      const overrides = await salaryOverrideService.getOverrides(selectedMonth + 1, selectedYear);
+      const newTempAdvances: { [key: string]: TempSalaryData } = {};
+
+      overrides.forEach(ov => {
+        // Find existing advance data to preserve old/current advance if needed,
+        // but here we primarily care about salary components.
+        // We recalculate the totals based on overrides.
+
+        // Note: We need the BASE values to calculate correctly? 
+        // No, the override REPLACES the base value in the calculation.
+        // But for "net", we need deduction etc.
+        // Since we don't have all data here easily, strictly speaking, 
+        // we should merge with existing tempAdvances or initialize carefully.
+
+        const basicVal = ov.basicOverride;
+        const incentiveVal = ov.incentiveOverride;
+        const hraVal = ov.hraOverride;
+        const mealVal = ov.mealAllowanceOverride;
+        const sundayVal = ov.sundayPenaltyOverride;
+
+        // If we have any override, we initialize the temp object
+        if (basicVal !== undefined || incentiveVal !== undefined || hraVal !== undefined || mealVal !== undefined || sundayVal !== undefined) {
+          newTempAdvances[ov.staffId] = {
+            basicOverride: basicVal,
+            incentiveOverride: incentiveVal,
+            hraOverride: hraVal,
+            mealAllowanceOverride: mealVal,
+            sundayPenaltyOverride: sundayVal,
+            // We can't easily calc gross/net here without knowing defaults (advances/deductions)
+            // But the UI will use these overrides when switching to edit mode?
+            // Actually, if we just set these, the `getEffectiveSalary` helper (if it exists) would work.
+            // But existing code expects `grossSalary` in tempData?
+          };
+        }
+      });
+
+      setTempAdvances(prev => {
+        // Merge with previous to not lose other edits if any (though usually we load on mount/month change)
+        // Actually, we should merge carefully.
+        // For now, let's just use the loaded overrides as the base state for this month.
+        return newTempAdvances;
+      });
+
+      // If we have overrides, we should probably turn on edit mode for those rows? 
+      // Or just having the data there allows the "Edit" button to show them?
+      // When user clicks "Edit All", it initializes tempAdvances. 
+      // We need to ensure that initialization RESPECTS these loaded overrides.
+    };
+    loadOverrides();
+  }, [selectedMonth, selectedYear]);
 
   const activeStaff = staff.filter(member => {
     if (!member.isActive) return false;
@@ -56,6 +112,44 @@ const SalaryManagement: React.FC<SalaryManagementProps> = ({
     ? activeStaff
     : activeStaff.filter(member => member.location === locationFilter);
 
+  // State for monthly overrides
+  const [overrides, setOverrides] = useState<{ [key: string]: SalaryOverride }>({});
+
+  // Load monthly overrides
+  React.useEffect(() => {
+    const loadOverrides = async () => {
+      const dbOverrides = await salaryOverrideService.getOverrides(selectedMonth + 1, selectedYear);
+      const overridesMap: { [key: string]: SalaryOverride } = {};
+
+      const newTempAdvances: { [key: string]: TempSalaryData } = {};
+
+      dbOverrides.forEach(ov => {
+        overridesMap[ov.staffId] = ov;
+
+        const basicVal = ov.basicOverride;
+        const incentiveVal = ov.incentiveOverride;
+        const hraVal = ov.hraOverride;
+        const mealVal = ov.mealAllowanceOverride;
+        const sundayVal = ov.sundayPenaltyOverride;
+
+        if (basicVal !== undefined || incentiveVal !== undefined || hraVal !== undefined || mealVal !== undefined || sundayVal !== undefined) {
+          newTempAdvances[ov.staffId] = {
+            basicOverride: basicVal,
+            incentiveOverride: incentiveVal,
+            hraOverride: hraVal,
+            mealAllowanceOverride: mealVal,
+            sundayPenaltyOverride: sundayVal,
+          };
+        }
+      });
+
+      setOverrides(overridesMap);
+      setTempAdvances(newTempAdvances);
+    };
+    loadOverrides();
+  }, [selectedMonth, selectedYear]);
+
+
   const calculateSalaryDetails = (): SalaryDetail[] => {
     return filteredStaff.map(member => {
       const attendanceMetrics = calculateAttendanceMetrics(member.id, attendance, selectedYear, selectedMonth);
@@ -65,7 +159,38 @@ const SalaryManagement: React.FC<SalaryManagementProps> = ({
         adv.year === selectedYear
       );
 
-      return calculateSalary(member, attendanceMetrics, memberAdvances, advances, attendance, selectedMonth, selectedYear);
+      const baseDetail = calculateSalary(member, attendanceMetrics, memberAdvances, advances, attendance, selectedMonth, selectedYear);
+
+      // Merge with overrides if present
+      const override = overrides[member.id];
+      if (override) {
+        const basic = override.basicOverride ?? baseDetail.basicEarned;
+        const incentive = override.incentiveOverride ?? baseDetail.incentiveEarned;
+        const hra = override.hraOverride ?? baseDetail.hraEarned;
+        const meal = override.mealAllowanceOverride ?? baseDetail.mealAllowance;
+        const sundayPenalty = override.sundayPenaltyOverride ?? baseDetail.sundayPenalty;
+
+        // Recalculate totals
+        // Note: Gross = sum of earnings. Net = Gross - Deductions.
+        // We assume 'baseDetail.deduction' is correct unless overridden (advances logic handled elsewhere?)
+        // Actually, advances are separate. 'baseDetail.deduction' includes standard deductions.
+
+        const gross = roundToNearest10(basic + incentive + hra + meal);
+        const net = roundToNearest10(gross - baseDetail.deduction - sundayPenalty);
+
+        return {
+          ...baseDetail,
+          basicEarned: basic,
+          incentiveEarned: incentive,
+          hraEarned: hra,
+          mealAllowance: meal,
+          sundayPenalty: sundayPenalty,
+          grossSalary: gross,
+          netSalary: net
+        };
+      }
+
+      return baseDetail;
     });
   };
 
@@ -243,6 +368,33 @@ const SalaryManagement: React.FC<SalaryManagementProps> = ({
       ...tempAdvances,
       [staffId]: updated
     });
+
+    // Auto-save overrides to DB and update local overrides state
+    if (['basicOverride', 'incentiveOverride', 'hraOverride', 'mealAllowanceOverride', 'sundayPenaltyOverride'].includes(field)) {
+      const overrideUpdate = {
+        staffId,
+        month: selectedMonth + 1,
+        year: selectedYear,
+        basicOverride: updated.basicOverride,
+        incentiveOverride: updated.incentiveOverride,
+        hraOverride: updated.hraOverride,
+        mealAllowanceOverride: updated.mealAllowanceOverride,
+        sundayPenaltyOverride: updated.sundayPenaltyOverride
+      };
+
+      // Optimistically update local state so View Mode reflects changes instantly
+      setOverrides(prev => ({
+        ...prev,
+        [staffId]: {
+          ...prev[staffId],
+          id: prev[staffId]?.id || '', // Keep existing ID or empty
+          ...overrideUpdate
+        }
+      }));
+
+      salaryOverrideService.upsertOverride(overrideUpdate)
+        .catch(err => console.error("Failed to auto-save override:", err));
+    }
   };
 
   // Calculate totals for the table

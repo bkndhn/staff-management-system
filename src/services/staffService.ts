@@ -52,6 +52,18 @@ export const staffService = {
       updated_at: new Date().toISOString()
     };
 
+    if (updates.name !== undefined) (dbUpdates as any).name = updates.name;
+    if (updates.location !== undefined) (dbUpdates as any).location = updates.location;
+    if (updates.type !== undefined) (dbUpdates as any).type = updates.type;
+    if (updates.experience !== undefined) (dbUpdates as any).experience = updates.experience;
+    if (updates.basicSalary !== undefined) (dbUpdates as any).basic_salary = updates.basicSalary;
+    if (updates.incentive !== undefined) (dbUpdates as any).incentive = updates.incentive;
+    if (updates.hra !== undefined) (dbUpdates as any).hra = updates.hra;
+    if (updates.totalSalary !== undefined) (dbUpdates as any).total_salary = updates.totalSalary;
+    if (updates.joinedDate !== undefined) (dbUpdates as any).joined_date = updates.joinedDate;
+    if (updates.isActive !== undefined) (dbUpdates as any).is_active = updates.isActive;
+    if (updates.sundayPenalty !== undefined) (dbUpdates as any).sunday_penalty = updates.sundayPenalty;
+    if (updates.salaryCalculationDays !== undefined) (dbUpdates as any).salary_calculation_days = updates.salaryCalculationDays;
     if (updates.displayOrder !== undefined) (dbUpdates as any).display_order = updates.displayOrder;
     if (updates.salarySupplements !== undefined) (dbUpdates as any).salary_supplements = updates.salarySupplements;
     if (updates.mealAllowance !== undefined) (dbUpdates as any).meal_allowance = updates.mealAllowance;
@@ -147,7 +159,8 @@ export const staffService = {
       sunday_penalty: staff.sundayPenalty ?? true,
       salary_calculation_days: staff.salaryCalculationDays || 30,
       salary_supplements: staff.salarySupplements || {},
-      meal_allowance: staff.mealAllowance || 0
+      meal_allowance: staff.mealAllowance || 0,
+      display_order: staff.displayOrder || 0
     };
   }
 };
