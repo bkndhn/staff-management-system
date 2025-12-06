@@ -1134,6 +1134,36 @@ const PartTimeStaff: React.FC<PartTimeStaffProps> = ({
                             <option value="dateRange">Date Range</option>
                         </select>
 
+                        {reportType === 'monthly' && (
+                            <div className="flex flex-wrap items-center gap-2">
+                                <select
+                                    value={selectedMonth}
+                                    onChange={(e) => setSelectedMonth(Number(e.target.value))}
+                                    className="px-2 md:px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent text-sm"
+                                >
+                                    {Array.from({ length: 12 }, (_, i) => (
+                                        <option key={i} value={i}>
+                                            {new Date(0, i).toLocaleString('default', { month: 'long' })}
+                                        </option>
+                                    ))}
+                                </select>
+                                <select
+                                    value={selectedYear}
+                                    onChange={(e) => setSelectedYear(Number(e.target.value))}
+                                    className="px-2 md:px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent text-sm"
+                                >
+                                    {Array.from({ length: 5 }, (_, i) => (
+                                        <option key={i} value={new Date().getFullYear() - 2 + i}>
+                                            {new Date().getFullYear() - 2 + i}
+                                        </option>
+                                    ))}
+                                </select>
+                                <span className="px-3 py-1 bg-green-100 text-green-800 text-sm font-medium rounded-full">
+                                    {new Date(0, selectedMonth).toLocaleString('default', { month: 'long' })} {selectedYear}
+                                </span>
+                            </div>
+                        )}
+
                         {reportType === 'weekly' && (() => {
                             const weeks = getWeeksInMonth(selectedYear, selectedMonth);
                             const selectedWeekData = weeks[selectedWeek];
