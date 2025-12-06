@@ -95,6 +95,19 @@ export const staffService = {
     }
   },
 
+  async permanentDelete(id: string): Promise<void> {
+    // Hard delete - permanently removes staff record from database
+    const { error } = await supabase
+      .from('staff')
+      .delete()
+      .eq('id', id);
+
+    if (error) {
+      console.error('Error permanently deleting staff:', error);
+      throw error;
+    }
+  },
+
   // Update staff order - batch update display_order for all staff
   async updateStaffOrder(staffIds: string[]): Promise<void> {
     try {

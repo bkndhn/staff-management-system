@@ -495,6 +495,37 @@ function App() {
     }
   };
 
+  // Permanently delete staff from old records (admin only)
+  const permanentDeleteOldStaff = async (record: OldStaffRecord) => {
+    if (user?.role !== 'admin') {
+      alert('Only administrators can permanently delete staff');
+      return;
+    }
+
+    try {
+      // Delete from old_staff_records
+      await oldStaffService.delete(record.id);
+
+      // Also try to delete from staff table if exists (hard delete)
+      try {
+        await staffService.permanentDelete(record.staffId || record.id);
+      } catch (e) {
+        // Staff may not exist in main table, that's fine
+      }
+
+      // Remove from local state
+      setOldStaffRecords(prev => prev.filter(r => r.id !== record.id));
+
+      // Also remove related attendance if any
+      setAttendance(prev => prev.filter(a => a.staffId !== record.staffId && a.staffId !== record.id));
+
+      alert(`${record.name} has been permanently deleted.`);
+    } catch (error) {
+      console.error('Error permanently deleting staff:', error);
+      alert('Failed to delete staff. Please try again.');
+    }
+  };
+
   // Update advances and deductions (admin only)
   const updateAdvances = async (staffId: string, month: number, year: number, advanceData: Partial<AdvanceDeduction>) => {
     if (user?.role !== 'admin') {
@@ -630,6 +661,7 @@ function App() {
           <OldStaffRecords
             oldStaffRecords={oldStaffRecords}
             onRejoinStaff={rejoinStaff}
+            onPermanentDelete={permanentDeleteOldStaff}
           />
         );
       default:

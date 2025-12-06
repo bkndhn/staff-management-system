@@ -115,6 +115,22 @@ const PartTimeStaff: React.FC<PartTimeStaffProps> = ({
     const [showSettings, setShowSettings] = useState(false);
     const [partTimeRates, setPartTimeRates] = useState(() => settingsService.getPartTimeRates());
 
+    // Bulk add state
+    const [bulkStaffList, setBulkStaffList] = useState<{
+        name: string;
+        shift: 'Morning' | 'Evening' | 'Both';
+        salary: number;
+        arrivalTime: string;
+        leavingTime: string;
+    }[]>([{
+        name: '',
+        shift: (new Date().getDay() === 0 ? 'Both' : 'Morning') as 'Morning' | 'Evening' | 'Both',
+        salary: 0,
+        arrivalTime: '',
+        leavingTime: ''
+    }]);
+    const [bulkLocation, setBulkLocation] = useState(userLocation || settingsService.getLocations()[0] || 'Big Shop');
+
     // Get recent names for smart suggestions
     const getRecentNames = () => {
         const thirtyDaysAgo = new Date();
@@ -300,6 +316,100 @@ const PartTimeStaff: React.FC<PartTimeStaffProps> = ({
         );
 
         return partTimeNameDuplicate || fullTimeDuplicate;
+    };
+
+    // Bulk add helper functions
+    const handleAddBulkRow = () => {
+        setBulkStaffList([...bulkStaffList, {
+            name: '',
+            shift: (new Date().getDay() === 0 ? 'Both' : 'Morning') as 'Morning' | 'Evening' | 'Both',
+            salary: 0,
+            arrivalTime: '',
+            leavingTime: ''
+        }]);
+    };
+
+    const handleRemoveBulkRow = (index: number) => {
+        if (bulkStaffList.length > 1) {
+            setBulkStaffList(bulkStaffList.filter((_, i) => i !== index));
+        }
+    };
+
+    const handleBulkRowChange = (index: number, field: string, value: any) => {
+        const newList = [...bulkStaffList];
+        (newList[index] as any)[field] = value;
+        setBulkStaffList(newList);
+    };
+
+    const handleBulkSubmit = (e: React.FormEvent) => {
+        e.preventDefault();
+
+        const errors: string[] = [];
+        const validEntries: typeof bulkStaffList = [];
+
+        bulkStaffList.forEach((staffData, index) => {
+            if (!staffData.name.trim()) {
+                errors.push(`Row ${index + 1}: Name is required`);
+                return;
+            }
+
+            // Check for duplicate in current bulk list
+            const duplicateInList = bulkStaffList.filter((s, i) =>
+                i !== index &&
+                s.name.toLowerCase().trim() === staffData.name.toLowerCase().trim() &&
+                s.shift === staffData.shift
+            ).length > 0;
+
+            if (duplicateInList) {
+                errors.push(`Row ${index + 1}: ${staffData.name} is duplicated in this list`);
+                return;
+            }
+
+            if (checkDuplicate(staffData.name, bulkLocation, staffData.shift)) {
+                errors.push(`Row ${index + 1}: ${staffData.name} already exists for today`);
+                return;
+            }
+
+            validEntries.push(staffData);
+        });
+
+        if (errors.length > 0) {
+            alert(errors.join('\n'));
+            return;
+        }
+
+        // Submit all valid entries
+        validEntries.forEach((staffData, index) => {
+            const staffId = `pt_${Date.now()}_${index}`;
+            let defaultSalary = getPartTimeDailySalary(selectedDate);
+            if (staffData.shift === 'Morning' || staffData.shift === 'Evening') {
+                defaultSalary = Math.round(defaultSalary / 2);
+            }
+
+            const finalSalary = staffData.salary > 0 ? staffData.salary : defaultSalary;
+            const isSalaryEdited = staffData.salary > 0 && staffData.salary !== defaultSalary;
+            const arrivalTime = staffData.arrivalTime || new Date().toTimeString().slice(0, 5);
+            let leavingTime = staffData.leavingTime;
+            if (!leavingTime) {
+                leavingTime = staffData.shift === 'Morning' ? '15:00' : '21:30';
+            }
+
+            onUpdateAttendance(
+                staffId, selectedDate, 'Present', true,
+                staffData.name.trim(), staffData.shift, bulkLocation,
+                finalSalary, isSalaryEdited, arrivalTime, leavingTime
+            );
+        });
+
+        // Reset form
+        setBulkStaffList([{
+            name: '',
+            shift: (new Date().getDay() === 0 ? 'Both' : 'Morning') as 'Morning' | 'Evening' | 'Both',
+            salary: 0,
+            arrivalTime: '',
+            leavingTime: ''
+        }]);
+        setShowAddForm(false);
     };
 
     // Helper functions for multi-location selection
@@ -612,103 +722,140 @@ const PartTimeStaff: React.FC<PartTimeStaffProps> = ({
                 </div>
             </div>
 
-            {/* Add Part-Time Staff Form */}
+            {/* Add Part-Time Staff Form (Bulk) */}
             {showAddForm && (
                 <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 md:p-6">
-                    <h2 className="text-lg md:text-xl font-bold text-gray-800 mb-4">Add Part-Time Staff for Today</h2>
-                    <form onSubmit={handleAddPartTimeAttendance} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">Name</label>
-                            <input
-                                list="recent-names"
-                                type="text"
-                                value={newStaffData.name}
-                                onChange={(e) => setNewStaffData({ ...newStaffData, name: e.target.value })}
-                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                                required
-                            />
-                            <datalist id="recent-names">
-                                {recentNames.map((name, index) => (
-                                    <option key={index} value={name} />
-                                ))}
-                            </datalist>
-                        </div>
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">Location</label>
+                    <div className="flex justify-between items-center mb-4">
+                        <h2 className="text-lg md:text-xl font-bold text-gray-800">Add Part-Time Staff for Today</h2>
+                        <button onClick={() => setShowAddForm(false)} className="text-gray-500 hover:text-gray-700">
+                            <X size={20} />
+                        </button>
+                    </div>
+
+                    <form onSubmit={handleBulkSubmit}>
+                        {/* Common Location */}
+                        <div className="mb-6">
+                            <label className="block text-sm font-medium text-gray-700 mb-1">Location (Applies to all)</label>
                             <select
-                                value={newStaffData.location}
-                                onChange={(e) => setNewStaffData({ ...newStaffData, location: e.target.value as any })}
-                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                                value={bulkLocation}
+                                onChange={(e) => setBulkLocation(e.target.value)}
+                                className="w-full md:w-1/3 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                                 disabled={!!userLocation}
                             >
                                 {settingsService.getLocations().map(loc => (<option key={loc} value={loc}>{loc}</option>))}
                             </select>
                         </div>
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">Shift</label>
-                            <select
-                                value={newStaffData.shift}
-                                onChange={(e) => setNewStaffData({ ...newStaffData, shift: e.target.value as any })}
-                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                            >
-                                <option value="Morning">Morning (Half Day)</option>
-                                <option value="Evening">Evening (Half Day)</option>
-                                <option value="Both">Both (Full Day)</option>
-                            </select>
-                        </div>
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">Salary (Optional)</label>
-                            <div className="relative">
-                                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                                    <span className="text-gray-500 sm:text-sm">₹</span>
+
+                        {/* Staff Rows */}
+                        <div className="space-y-4">
+                            {bulkStaffList.map((staffEntry, index) => (
+                                <div key={index} className="p-4 bg-gray-50 rounded-lg border border-gray-200 relative">
+                                    <div className="absolute top-2 right-2">
+                                        {bulkStaffList.length > 1 && (
+                                            <button
+                                                type="button"
+                                                onClick={() => handleRemoveBulkRow(index)}
+                                                className="text-red-500 hover:text-red-700 p-1"
+                                                title="Remove row"
+                                            >
+                                                <Trash2 size={18} />
+                                            </button>
+                                        )}
+                                    </div>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+                                        <div>
+                                            <label className="block text-xs font-medium text-gray-700 mb-1">Name</label>
+                                            <input
+                                                list={`recent-names-${index}`}
+                                                type="text"
+                                                value={staffEntry.name}
+                                                onChange={(e) => handleBulkRowChange(index, 'name', e.target.value)}
+                                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                                                placeholder="Enter name"
+                                                required
+                                            />
+                                            <datalist id={`recent-names-${index}`}>
+                                                {recentNames.map((name, i) => (
+                                                    <option key={i} value={name} />
+                                                ))}
+                                            </datalist>
+                                        </div>
+                                        <div>
+                                            <label className="block text-xs font-medium text-gray-700 mb-1">Shift</label>
+                                            <select
+                                                value={staffEntry.shift}
+                                                onChange={(e) => handleBulkRowChange(index, 'shift', e.target.value)}
+                                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                                            >
+                                                <option value="Morning">Morning (Half)</option>
+                                                <option value="Evening">Evening (Half)</option>
+                                                <option value="Both">Both (Full)</option>
+                                            </select>
+                                        </div>
+                                        <div>
+                                            <label className="block text-xs font-medium text-gray-700 mb-1">Salary (Opt)</label>
+                                            <div className="relative">
+                                                <span className="absolute inset-y-0 left-0 pl-2 flex items-center text-gray-500 text-xs">₹</span>
+                                                <input
+                                                    type="number"
+                                                    value={staffEntry.salary || ''}
+                                                    onChange={(e) => handleBulkRowChange(index, 'salary', Number(e.target.value))}
+                                                    className="w-full pl-6 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                                                    placeholder={(() => {
+                                                        let defaultSalary = getPartTimeDailySalary(selectedDate);
+                                                        if (staffEntry.shift === 'Morning' || staffEntry.shift === 'Evening') {
+                                                            defaultSalary = Math.round(defaultSalary / 2);
+                                                        }
+                                                        return `${defaultSalary}`;
+                                                    })()}
+                                                />
+                                            </div>
+                                        </div>
+                                        <div>
+                                            <label className="block text-xs font-medium text-gray-700 mb-1">Arrival</label>
+                                            <input
+                                                type="time"
+                                                value={staffEntry.arrivalTime}
+                                                onChange={(e) => handleBulkRowChange(index, 'arrivalTime', e.target.value)}
+                                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="block text-xs font-medium text-gray-700 mb-1">Leaving</label>
+                                            <input
+                                                type="time"
+                                                value={staffEntry.leavingTime}
+                                                onChange={(e) => handleBulkRowChange(index, 'leavingTime', e.target.value)}
+                                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                                            />
+                                        </div>
+                                    </div>
                                 </div>
-                                <input
-                                    type="number"
-                                    value={newStaffData.salary || ''}
-                                    onChange={(e) => setNewStaffData({ ...newStaffData, salary: Number(e.target.value) })}
-                                    placeholder={(() => {
-                                        let defaultSalary = getPartTimeDailySalary(selectedDate);
-                                        if (newStaffData.shift === 'Morning' || newStaffData.shift === 'Evening') {
-                                            defaultSalary = Math.round(defaultSalary / 2);
-                                        }
-                                        return `Auto: ₹${defaultSalary}`;
-                                    })()}
-                                    className="w-full pl-7 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                                />
-                            </div>
-                            <p className="mt-1 text-xs text-gray-500">Leave empty to use auto-calculated salary</p>
+                            ))}
                         </div>
-                        <div className="md:col-span-2 lg:col-span-1">
-                            <label className="block text-sm font-medium text-gray-700 mb-1">Arrival Time</label>
-                            <input
-                                type="time"
-                                value={newStaffData.arrivalTime}
-                                onChange={(e) => setNewStaffData({ ...newStaffData, arrivalTime: e.target.value })}
-                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                            />
-                        </div>
-                        <div className="md:col-span-2 lg:col-span-1">
-                            <label className="block text-sm font-medium text-gray-700 mb-1">Leaving Time</label>
-                            <input
-                                type="time"
-                                value={newStaffData.leavingTime}
-                                onChange={(e) => setNewStaffData({ ...newStaffData, leavingTime: e.target.value })}
-                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                            />
-                        </div>
-                        <div className="md:col-span-2 lg:col-span-4 flex flex-col sm:flex-row items-end gap-2">
+
+                        <div className="mt-4 flex flex-col sm:flex-row gap-3">
                             <button
-                                type="submit"
-                                className="w-full sm:w-auto px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
+                                type="button"
+                                onClick={handleAddBulkRow}
+                                className="flex items-center justify-center gap-2 px-4 py-2 border border-dashed border-purple-300 text-purple-600 rounded-lg hover:bg-purple-50 transition-colors w-full sm:w-auto"
                             >
-                                Add Staff
+                                <Plus size={18} />
+                                Add Another Staff
                             </button>
+                            <div className="flex-1"></div>
                             <button
                                 type="button"
                                 onClick={() => setShowAddForm(false)}
-                                className="w-full sm:w-auto px-4 py-2 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400 transition-colors"
+                                className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors w-full sm:w-auto"
                             >
                                 Cancel
+                            </button>
+                            <button
+                                type="submit"
+                                className="px-6 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors font-medium w-full sm:w-auto"
+                            >
+                                Submit All Staff
                             </button>
                         </div>
                     </form>

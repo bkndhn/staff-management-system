@@ -1,14 +1,15 @@
 import React, { useState } from 'react';
 import { OldStaffRecord } from '../types';
-import { Archive, Download, Eye, Search, UserPlus } from 'lucide-react';
+import { Archive, Download, Eye, Search, UserPlus, Trash2 } from 'lucide-react';
 import { exportOldStaffPDF } from '../utils/pdfExport';
 
 interface OldStaffRecordsProps {
   oldStaffRecords: OldStaffRecord[];
   onRejoinStaff: (record: OldStaffRecord) => void;
+  onPermanentDelete: (record: OldStaffRecord) => void;
 }
 
-const OldStaffRecords: React.FC<OldStaffRecordsProps> = ({ oldStaffRecords, onRejoinStaff }) => {
+const OldStaffRecords: React.FC<OldStaffRecordsProps> = ({ oldStaffRecords, onRejoinStaff, onPermanentDelete }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedRecord, setSelectedRecord] = useState<OldStaffRecord | null>(null);
 
@@ -54,7 +55,7 @@ const OldStaffRecords: React.FC<OldStaffRecordsProps> = ({ oldStaffRecords, onRe
           Old Staff Records
         </h1>
         <div className="flex gap-3">
-          <button 
+          <button
             onClick={handleExportPDF}
             className="flex items-center gap-2 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
           >
@@ -87,7 +88,7 @@ const OldStaffRecords: React.FC<OldStaffRecordsProps> = ({ oldStaffRecords, onRe
             Archived Staff Records ({filteredRecords.length})
           </h2>
         </div>
-        
+
         {filteredRecords.length === 0 ? (
           <div className="p-8 text-center">
             <Archive className="mx-auto text-gray-400 mb-4" size={48} />
@@ -102,7 +103,7 @@ const OldStaffRecords: React.FC<OldStaffRecordsProps> = ({ oldStaffRecords, onRe
               <thead className="bg-gray-50">
                 <tr>
                   <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">S.No</th>
-                  <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
+                  <th className="sticky left-0 z-10 bg-gray-50 px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]">Name</th>
                   <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Location</th>
                   <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Type</th>
                   <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Experience</th>
@@ -120,11 +121,11 @@ const OldStaffRecords: React.FC<OldStaffRecordsProps> = ({ oldStaffRecords, onRe
                   const tenureMonths = Math.round((leftDate.getTime() - joinedDate.getTime()) / (1000 * 60 * 60 * 24 * 30));
                   const tenureYears = Math.floor(tenureMonths / 12);
                   const remainingMonths = tenureMonths % 12;
-                  
+
                   return (
                     <tr key={record.id} className="hover:bg-gray-50">
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{index + 1}</td>
-                      <td className="px-6 py-4 whitespace-nowrap">
+                      <td className="sticky left-0 z-10 bg-white px-6 py-4 whitespace-nowrap shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]">
                         <div>
                           <div className="text-sm font-medium text-gray-900">{record.name}</div>
                           <div className="text-sm text-gray-500">
@@ -152,9 +153,8 @@ const OldStaffRecords: React.FC<OldStaffRecordsProps> = ({ oldStaffRecords, onRe
                         ₹{record.totalSalary.toLocaleString()}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm">
-                        <span className={`font-semibold ${
-                          record.totalAdvanceOutstanding > 0 ? 'text-red-600' : 'text-green-600'
-                        }`}>
+                        <span className={`font-semibold ${record.totalAdvanceOutstanding > 0 ? 'text-red-600' : 'text-green-600'
+                          }`}>
                           ₹{record.totalAdvanceOutstanding.toLocaleString()}
                         </span>
                       </td>
@@ -176,6 +176,17 @@ const OldStaffRecords: React.FC<OldStaffRecordsProps> = ({ oldStaffRecords, onRe
                             title="Rejoin staff"
                           >
                             <UserPlus size={16} />
+                          </button>
+                          <button
+                            onClick={() => {
+                              if (window.confirm(`PERMANENT DELETE: Are you sure you want to permanently delete ${record.name}?\n\nThis will remove ALL their data including attendance and salary history. This action CANNOT be undone.`)) {
+                                onPermanentDelete(record);
+                              }
+                            }}
+                            className="text-red-600 hover:text-red-800 p-1 rounded hover:bg-red-50 transition-colors"
+                            title="Permanently delete"
+                          >
+                            <Trash2 size={16} />
                           </button>
                         </div>
                       </td>
@@ -204,7 +215,7 @@ const OldStaffRecords: React.FC<OldStaffRecordsProps> = ({ oldStaffRecords, onRe
                 ✕
               </button>
             </div>
-            
+
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="space-y-4">
                 <h4 className="font-semibold text-gray-800 border-b pb-2">Personal Information</h4>
@@ -218,7 +229,7 @@ const OldStaffRecords: React.FC<OldStaffRecordsProps> = ({ oldStaffRecords, onRe
                   <div><span className="font-medium">Reason:</span> {selectedRecord.reason}</div>
                 </div>
               </div>
-              
+
               <div className="space-y-4">
                 <h4 className="font-semibold text-gray-800 border-b pb-2">Salary Information</h4>
                 <div className="space-y-2 text-sm">
@@ -227,17 +238,16 @@ const OldStaffRecords: React.FC<OldStaffRecordsProps> = ({ oldStaffRecords, onRe
                   <div><span className="font-medium">HRA:</span> ₹{selectedRecord.hra.toLocaleString()}</div>
                   <div><span className="font-medium">Total Salary:</span> ₹{selectedRecord.totalSalary.toLocaleString()}</div>
                   <div>
-                    <span className="font-medium">Outstanding Advance:</span> 
-                    <span className={`ml-1 font-semibold ${
-                      selectedRecord.totalAdvanceOutstanding > 0 ? 'text-red-600' : 'text-green-600'
-                    }`}>
+                    <span className="font-medium">Outstanding Advance:</span>
+                    <span className={`ml-1 font-semibold ${selectedRecord.totalAdvanceOutstanding > 0 ? 'text-red-600' : 'text-green-600'
+                      }`}>
                       ₹{selectedRecord.totalAdvanceOutstanding.toLocaleString()}
                     </span>
                   </div>
                 </div>
               </div>
             </div>
-            
+
             <div className="mt-6 flex justify-between">
               <button
                 onClick={() => handleRejoin(selectedRecord)}
