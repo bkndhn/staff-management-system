@@ -399,3 +399,160 @@ export const exportOldStaffPDF = (oldStaffRecords: OldStaffRecord[]) => {
 
   doc.save(`old-staff-records-${new Date().toISOString().split('T')[0]}.pdf`);
 };
+
+// Generate individual salary slip PDF - Compact Design
+export const generateSalarySlipPDF = (
+  salaryDetail: SalaryDetail,
+  staffMember: Staff,
+  month: number,
+  year: number
+) => {
+  const doc = new jsPDF();
+  const pageWidth = doc.internal.pageSize.getWidth();
+  const monthName = new Date(year, month).toLocaleString('default', { month: 'long' });
+
+  renderCompactSalarySlip(doc, salaryDetail, staffMember, monthName, year, 10);
+
+  doc.save(`salary-slip-${staffMember.name.replace(/\s+/g, '-')}-${monthName}-${year}.pdf`);
+};
+
+// Generate bulk salary slips PDF - Compact Design (2-3 per page)
+export const exportBulkSalarySlipsPDF = (
+  salaryDetails: SalaryDetail[],
+  staff: Staff[],
+  month: number,
+  year: number
+) => {
+  const doc = new jsPDF();
+  const pageHeight = doc.internal.pageSize.getHeight();
+  const monthName = new Date(year, month).toLocaleString('default', { month: 'long' });
+  const slipHeight = 90; // Height per slip
+  const slipsPerPage = 3;
+
+  let currentSlipOnPage = 0;
+
+  salaryDetails.forEach((salaryDetail, index) => {
+    const staffMember = staff.find(s => s.id === salaryDetail.staffId);
+    if (!staffMember) return;
+
+    // Add new page if needed
+    if (currentSlipOnPage >= slipsPerPage) {
+      doc.addPage();
+      currentSlipOnPage = 0;
+    }
+
+    const startY = 10 + (currentSlipOnPage * slipHeight);
+    renderCompactSalarySlip(doc, salaryDetail, staffMember, monthName, year, startY);
+
+    // Add separator line if not last on page
+    if (currentSlipOnPage < slipsPerPage - 1 && index < salaryDetails.length - 1) {
+      doc.setDrawColor(200, 200, 200);
+      doc.setLineDashPattern([2, 2], 0);
+      doc.line(15, startY + slipHeight - 5, doc.internal.pageSize.getWidth() - 15, startY + slipHeight - 5);
+      doc.setLineDashPattern([], 0);
+    }
+
+    currentSlipOnPage++;
+  });
+
+  doc.save(`all-salary-slips-${monthName}-${year}.pdf`);
+};
+
+// Helper function to render a compact salary slip
+const renderCompactSalarySlip = (
+  doc: jsPDF,
+  salaryDetail: SalaryDetail,
+  staffMember: Staff,
+  monthName: string,
+  year: number,
+  startY: number
+) => {
+  const pageWidth = doc.internal.pageSize.getWidth();
+  const leftMargin = 15;
+  const rightHalf = pageWidth / 2 + 5;
+  let y = startY;
+
+  // Format currency helper
+  const fmt = (n: number) => `Rs. ${n.toLocaleString('en-IN')}`;
+
+  // ===== Header Bar =====
+  doc.setFillColor(88, 28, 135);
+  doc.rect(leftMargin, y, pageWidth - 30, 12, 'F');
+
+  doc.setTextColor(255, 255, 255);
+  doc.setFontSize(10);
+  doc.setFont('helvetica', 'bold');
+  doc.text('SALARY SLIP', leftMargin + 5, y + 8);
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(9);
+  doc.text(`${monthName} ${year}`, pageWidth - leftMargin - 5, y + 8, { align: 'right' });
+
+  y += 15;
+  doc.setTextColor(0, 0, 0);
+
+  // ===== Employee Info Row =====
+  doc.setFontSize(9);
+  doc.setFont('helvetica', 'bold');
+  doc.text(`${staffMember.name}`, leftMargin, y);
+  doc.setFont('helvetica', 'normal');
+  doc.text(`(${staffMember.location})`, leftMargin + doc.getTextWidth(staffMember.name) + 3, y);
+
+  // Attendance on same line
+  doc.text(`P: ${salaryDetail.presentDays}  H: ${salaryDetail.halfDays}  L: ${salaryDetail.leaveDays}  SA: ${salaryDetail.sundayAbsents}`, rightHalf, y);
+
+  y += 6;
+
+  // ===== Main Table =====
+  const tableData = [
+    ['Basic', fmt(salaryDetail.basicEarned), 'Old Adv', fmt(salaryDetail.oldAdv)],
+    ['Incentive', fmt(salaryDetail.incentiveEarned), 'Cur Adv', fmt(salaryDetail.curAdv)],
+    ['HRA', fmt(salaryDetail.hraEarned), 'Deduction', fmt(salaryDetail.deduction)],
+    ['Meal', fmt(salaryDetail.mealAllowance), 'Sun Penalty', fmt(salaryDetail.sundayPenalty)],
+  ];
+
+  const totalDeductions = salaryDetail.oldAdv + salaryDetail.curAdv + salaryDetail.deduction + salaryDetail.sundayPenalty;
+
+  autoTable(doc, {
+    body: tableData,
+    startY: y,
+    margin: { left: leftMargin, right: leftMargin },
+    theme: 'grid',
+    styles: {
+      fontSize: 8,
+      cellPadding: 1.5,
+      lineColor: [200, 200, 200],
+      lineWidth: 0.1
+    },
+    columnStyles: {
+      0: { cellWidth: 30, fontStyle: 'bold', fillColor: [245, 245, 245] },
+      1: { cellWidth: 40, halign: 'right' },
+      2: { cellWidth: 35, fontStyle: 'bold', fillColor: [245, 245, 245] },
+      3: { cellWidth: 40, halign: 'right', textColor: [180, 0, 0] }
+    },
+    didParseCell: (data) => {
+      // Make amounts in column 1 green
+      if (data.column.index === 1) {
+        data.cell.styles.textColor = [0, 128, 0];
+      }
+    }
+  });
+
+  y = (doc as any).lastAutoTable.finalY + 3;
+
+  // ===== Summary Row =====
+  doc.setFillColor(34, 150, 80);
+  doc.rect(leftMargin, y, pageWidth - 30, 12, 'F');
+
+  doc.setTextColor(255, 255, 255);
+  doc.setFontSize(8);
+  doc.setFont('helvetica', 'bold');
+
+  doc.text(`Gross: ${fmt(salaryDetail.grossSalary)}`, leftMargin + 5, y + 5);
+  doc.text(`Deductions: ${fmt(totalDeductions)}`, leftMargin + 55, y + 5);
+  doc.text(`New Adv: ${fmt(salaryDetail.newAdv)}`, rightHalf + 10, y + 5);
+
+  doc.setFontSize(10);
+  doc.text(`NET: ${fmt(salaryDetail.netSalary)}`, pageWidth - leftMargin - 5, y + 8, { align: 'right' });
+
+  doc.setTextColor(0, 0, 0);
+};

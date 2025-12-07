@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 import { Staff, Attendance, SalaryDetail, AdvanceDeduction, PartTimeSalaryDetail } from '../types';
-import { DollarSign, Download, Users, Calendar, TrendingUp, Edit2, Save, X, FileSpreadsheet, Search } from 'lucide-react';
+import { DollarSign, Download, Users, Calendar, TrendingUp, Edit2, Save, X, FileSpreadsheet, Search, FileText } from 'lucide-react';
 import { calculateAttendanceMetrics, calculateSalary, calculatePartTimeSalary, roundToNearest10 } from '../utils/salaryCalculations';
-import { exportSalaryToExcel, exportSalaryPDF } from '../utils/exportUtils';
+import { exportSalaryToExcel, exportSalaryPDF, generateSalarySlipPDF, exportBulkSalarySlipsPDF } from '../utils/exportUtils';
 import { settingsService } from '../services/settingsService';
 import { salaryOverrideService } from '../services/salaryOverrideService';
 
@@ -348,6 +348,17 @@ const SalaryManagement: React.FC<SalaryManagementProps> = ({
     exportSalaryPDF(salaryDetails, partTimeSalaries, staff, selectedMonth, selectedYear);
   };
 
+  const handleDownloadAllSlips = () => {
+    exportBulkSalarySlipsPDF(salaryDetails, staff, selectedMonth, selectedYear);
+  };
+
+  const handleDownloadSingleSlip = (detail: SalaryDetail) => {
+    const staffMember = staff.find(s => s.id === detail.staffId);
+    if (staffMember) {
+      generateSalarySlipPDF(detail, staffMember, selectedMonth, selectedYear);
+    }
+  };
+
   const getAdvanceForStaff = (staffId: string) => {
     return advances.find(adv =>
       adv.staffId === staffId &&
@@ -486,6 +497,15 @@ const SalaryManagement: React.FC<SalaryManagementProps> = ({
               <Download size={16} />
               <span className="hidden sm:inline">Export PDF</span>
               <span className="sm:hidden">PDF</span>
+            </button>
+            <button
+              onClick={handleDownloadAllSlips}
+              className="whitespace-nowrap flex items-center justify-center gap-2 px-3 md:px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors text-sm"
+              title="Download individual salary slips for all staff"
+            >
+              <FileText size={16} />
+              <span className="hidden sm:inline">All Slips</span>
+              <span className="sm:hidden">Slips</span>
             </button>
           </div>
         </div>
@@ -676,6 +696,7 @@ const SalaryManagement: React.FC<SalaryManagementProps> = ({
                 <th className="px-2 md:px-4 py-3 md:py-4 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Gross</th>
                 <th className="px-2 md:px-4 py-3 md:py-4 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Net Salary</th>
                 <th className="px-2 md:px-4 py-3 md:py-4 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">New Adv</th>
+                <th className="px-2 md:px-4 py-3 md:py-4 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
@@ -828,6 +849,16 @@ const SalaryManagement: React.FC<SalaryManagementProps> = ({
                     {/* New Adv - Live calculated */}
                     <td className="px-2 md:px-4 py-3 whitespace-nowrap text-center text-blue-600">
                       ₹{editMode ? (tempData?.newAdvance || 0) : detail.newAdv}
+                    </td>
+                    {/* Actions - Download Slip */}
+                    <td className="px-2 md:px-4 py-3 whitespace-nowrap text-center">
+                      <button
+                        onClick={() => handleDownloadSingleSlip(detail)}
+                        className="inline-flex items-center justify-center p-1.5 text-purple-600 hover:bg-purple-100 rounded-lg transition-colors"
+                        title="Download Salary Slip"
+                      >
+                        <Download size={16} />
+                      </button>
                     </td>
                   </tr>
                 );
