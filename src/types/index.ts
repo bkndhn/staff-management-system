@@ -129,3 +129,34 @@ export interface AttendanceFilter {
   location?: string;
   search?: string;
 }
+
+export interface PartTimeAdvanceRecord {
+  id: string;
+  staffName: string;
+  location: string;
+  weekStartDate: string;
+  year: number;
+  month: number;
+  weekNumber: number;
+  openingBalance: number;
+  advanceGiven: number;
+  earnings: number;
+  adjustment: number;
+  pendingSalary: number;
+  closingBalance: number;
+  notes?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface PartTimeSettlement {
+  id: string;
+  staffName: string;
+  location: string;
+  settlementKey: string;
+  isSettled: boolean;
+  settledAt?: string;
+  settledBy?: string;
+  createdAt: string;
+  updatedAt: string;
+}

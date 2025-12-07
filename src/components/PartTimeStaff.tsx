@@ -4,6 +4,9 @@ import { Clock, Plus, Download, Calendar, DollarSign, Edit2, Save, X, FileSpread
 import { calculatePartTimeSalary, getPartTimeDailySalary, isSunday, getCurrencyBreakdown } from '../utils/salaryCalculations';
 import { exportSalaryToExcel, exportSalaryPDF, exportPartTimeSalaryPDF } from '../utils/exportUtils';
 import { settingsService } from '../services/settingsService';
+import { partTimeAdvanceService } from '../services/partTimeAdvanceService';
+import { partTimeSettlementService } from '../services/partTimeSettlementService';
+import { PartTimeAdvanceRecord } from '../types';
 
 interface PartTimeStaffProps {
     attendance: Attendance[];
@@ -13,6 +16,63 @@ interface PartTimeStaffProps {
     userLocation?: string;
     userRole?: string;
 }
+
+const AdvanceInput: React.FC<{
+    initialValue: number;
+    staffName: string;
+    location: string;
+    year: number;
+    month: number;
+    week: number;
+    onSave: (amount: number) => Promise<void>;
+}> = ({ initialValue, staffName, location, year, month, week, onSave }) => {
+    const [value, setValue] = useState(initialValue.toString());
+    const [isSaving, setIsSaving] = useState(false);
+
+    useEffect(() => {
+        if (!isSaving) {
+            setValue(initialValue.toString());
+        }
+    }, [initialValue, isSaving]);
+
+    const handleBlur = async () => {
+        const numValue = parseFloat(value) || 0;
+        if (numValue !== initialValue) {
+            setIsSaving(true);
+            await onSave(numValue);
+            setIsSaving(false);
+        }
+    };
+
+    const handleKeyDown = (e: React.KeyboardEvent) => {
+        if (e.key === 'Enter') {
+            e.currentTarget.blur();
+        }
+    };
+
+    return (
+        <div className="relative">
+            <div className="absolute inset-y-0 left-0 pl-2 flex items-center pointer-events-none">
+                <span className="text-gray-500 sm:text-sm">₹</span>
+            </div>
+            <input
+                type="number"
+                value={value}
+                onChange={(e) => setValue(e.target.value)}
+                onBlur={handleBlur}
+                onKeyDown={handleKeyDown}
+                className={`block w-24 pl-6 pr-2 py-1 text-right text-sm border-gray-300 rounded-md shadow-sm focus:ring-purple-500 focus:border-purple-500 ${isSaving ? 'bg-gray-100' : ''}`}
+                placeholder="0"
+                disabled={isSaving}
+            />
+            {isSaving && (
+                <div className="absolute inset-y-0 right-0 pr-2 flex items-center pointer-events-none">
+                    <div className="animate-spin h-3 w-3 border-2 border-purple-500 rounded-full border-t-transparent"></div>
+                </div>
+            )}
+        </div>
+    );
+};
 
 const PartTimeStaff: React.FC<PartTimeStaffProps> = ({
     attendance,
@@ -55,6 +115,7 @@ const PartTimeStaff: React.FC<PartTimeStaffProps> = ({
         userRole === 'admin' ? ['All'] : (userLocation ? [userLocation] : ['All'])
     );
     const [showLocationDropdown, setShowLocationDropdown] = useState(false);
+    const [searchQuery, setSearchQuery] = useState('');
     const dropdownRef = useRef<HTMLDivElement>(null);
 
     // Close dropdown when clicking outside
@@ -77,51 +138,111 @@ const PartTimeStaff: React.FC<PartTimeStaffProps> = ({
         start: new Date().toISOString().split('T')[0],
         end: new Date().toISOString().split('T')[0]
     });
+    const [reportViewType, setReportViewType] = useState<'Detailed' | 'Summary'>('Detailed');
+
+    // Past Report State
+    const [reportStaffFilter, setReportStaffFilter] = useState('All');
+    const [reportStartDate, setReportStartDate] = useState(new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split('T')[0]);
+    const [reportEndDate, setReportEndDate] = useState(new Date().toISOString().split('T')[0]);
+    const [isReportLoading, setIsReportLoading] = useState(false);
+    const [pastReportData, setPastReportData] = useState<PartTimeAdvanceRecord[]>([]);
+
+    // Settlement and Advance tracking state
+    const [settledSalaries, setSettledSalaries] = useState<Set<string>>(new Set());
+    const [advanceRecords, setAdvanceRecords] = useState<Record<string, PartTimeAdvanceRecord>>({});
+    const [aggregatedAdvances, setAggregatedAdvances] = useState<Record<string, number>>({});
+    const [isLoadingAdvances, setIsLoadingAdvances] = useState(false);
     const [selectedStaff, setSelectedStaff] = useState<Set<string>>(new Set());
-
-    // Helper to toggle selection
-    const handleToggleStaffSelection = (staffId: string, location: string) => {
-        const key = `${staffId}-${location}`;
-        const newSelection = new Set(selectedStaff);
-        if (newSelection.has(key)) {
-            newSelection.delete(key);
-        } else {
-            newSelection.add(key);
-        }
-        setSelectedStaff(newSelection);
-    };
-
-    // Helper to select/deselect all in a group
-    const handleSelectAllInGroup = (groupStaff: PartTimeSalaryDetail[], shouldSelect: boolean) => {
-        const newSelection = new Set(selectedStaff);
-        groupStaff.forEach(staff => {
-            const key = `${staff.name}-${staff.location}`;
-            if (shouldSelect) {
-                newSelection.add(key);
-            } else {
-                newSelection.delete(key);
-            }
-        });
-        setSelectedStaff(newSelection);
-    };
-    const [newStaffData, setNewStaffData] = useState({
-        name: '',
-        location: (userLocation || settingsService.getLocations()[0] || 'Big Shop'),
-        shift: (new Date().getDay() === 0 ? 'Both' : 'Morning') as 'Morning' | 'Evening' | 'Both',
-        salary: 0,
-        arrivalTime: '',
-        leavingTime: ''
-    });
-    const [showSettings, setShowSettings] = useState(false);
-    const [partTimeRates, setPartTimeRates] = useState(() => settingsService.getPartTimeRates());
-    const [searchQuery, setSearchQuery] = useState('');
     const [settlementFilter, setSettlementFilter] = useState<'all' | 'settled' | 'unsettled'>('all');
+    const [showSettings, setShowSettings] = useState(false);
+    const [partTimeRates, setPartTimeRates] = useState(settingsService.getPartTimeRates());
 
-    // Settlement tracking - stored in localStorage
-    const [settledSalaries, setSettledSalaries] = useState<Set<string>>(() => {
-        const stored = localStorage.getItem('settledPartTimeSalaries');
-        return stored ? new Set(JSON.parse(stored)) : new Set();
-    });
+    // Load settlements from database on mount
+    useEffect(() => {
+        const loadSettlements = async () => {
+            try {
+                const settledSet = await partTimeSettlementService.getSettlements();
+                setSettledSalaries(settledSet);
+            } catch (error) {
+                console.error('Error loading settlements:', error);
+            }
+        };
+        loadSettlements();
+    }, []);
+
+    const loadPastReport = async () => {
+        setIsReportLoading(true);
+        try {
+            const data = await partTimeAdvanceService.getReport(
+                reportStaffFilter === 'All' ? undefined : reportStaffFilter,
+                reportStartDate,
+                reportEndDate
+            );
+            setPastReportData(data);
+        } catch (error) {
+            console.error('Error loading report:', error);
+        } finally {
+            setIsReportLoading(false);
+        }
+    };
+
+    // Load advance data when view changes
+    useEffect(() => {
+        loadAdvanceData();
+    }, [reportType, selectedYear, selectedMonth, selectedWeek, selectedDate, dateRange.start, dateRange.end]);
+
+    const loadAdvanceData = async () => {
+        setIsLoadingAdvances(true);
+        try {
+            let startDate: string;
+            let endDate: string;
+
+            if (reportType === 'weekly') {
+                const weeks = getWeeksInMonth(selectedYear, selectedMonth);
+                const currentWeekData = weeks[selectedWeek];
+                if (!currentWeekData) {
+                    setIsLoadingAdvances(false);
+                    return;
+                }
+                startDate = currentWeekData.startDate.toISOString().split('T')[0];
+                endDate = currentWeekData.endDate.toISOString().split('T')[0];
+            } else if (reportType === 'monthly') {
+                startDate = new Date(selectedYear, selectedMonth, 1).toISOString().split('T')[0];
+                endDate = new Date(selectedYear, selectedMonth + 1, 0).toISOString().split('T')[0];
+            } else {
+                startDate = dateRange.start;
+                endDate = dateRange.end;
+            }
+
+            const records = await partTimeAdvanceService.getReport(
+                undefined,
+                startDate,
+                endDate
+            );
+
+            // Populate detailed map (mainly for weekly view editing)
+            const newMap: Record<string, PartTimeAdvanceRecord> = {};
+            records.forEach(r => {
+                const key = `${r.staffName}-${r.location}-${r.year}-${r.month}-${r.weekNumber}`;
+                newMap[key] = r;
+            });
+            setAdvanceRecords(newMap);
+
+            // Populate aggregated map (for monthly/date range view and totals)
+            const aggMap: Record<string, number> = {};
+            records.forEach(r => {
+                const key = `${r.staffName}-${r.location}`;
+                aggMap[key] = (aggMap[key] || 0) + r.advanceGiven;
+            });
+            setAggregatedAdvances(aggMap);
+
+        } catch (error) {
+            console.error("Failed to load advances", error);
+        } finally {
+            setIsLoadingAdvances(false);
+        }
+    };
+
 
     // Generate unique key for settlement tracking (always uses weekly key for consistency)
     const getWeeklySettlementKey = (staffName: string, location: string, year: number, month: number, week: number) => {
@@ -210,45 +331,61 @@ const PartTimeStaff: React.FC<PartTimeStaffProps> = ({
     };
 
     // Toggle settlement status (always toggles weekly key)
-    const toggleSettlement = (staffName: string, location: string) => {
+    const toggleSettlement = async (staffName: string, location: string) => {
         if (reportType === 'weekly') {
             // Toggle single week
             const key = getWeeklySettlementKey(staffName, location, selectedYear, selectedMonth, selectedWeek);
             const newSettled = new Set(settledSalaries);
-            if (newSettled.has(key)) {
-                newSettled.delete(key);
-            } else {
+            const isSettled = !newSettled.has(key);
+
+            if (isSettled) {
                 newSettled.add(key);
+            } else {
+                newSettled.delete(key);
             }
+
             setSettledSalaries(newSettled);
-            localStorage.setItem('settledPartTimeSalaries', JSON.stringify([...newSettled]));
+            // Async update
+            await partTimeSettlementService.toggleSettlement(staffName, location, key, isSettled);
+
         } else if (reportType === 'monthly') {
             // Toggle all weeks in month
             const weeks = getWeeksInMonthForSettlement(selectedYear, selectedMonth);
             const newSettled = new Set(settledSalaries);
             const status = getSettlementStatus(staffName, location);
+            const shouldSettle = !status.isFullySettled;
+            const updates: { staffName: string; location: string; settlementKey: string; isSettled: boolean }[] = [];
 
-            if (status.isFullySettled) {
+            if (!shouldSettle) {
                 // Unsettle all weeks
                 weeks.forEach((_, weekIndex) => {
                     const key = getWeeklySettlementKey(staffName, location, selectedYear, selectedMonth, weekIndex);
-                    newSettled.delete(key);
+                    if (newSettled.has(key)) {
+                        newSettled.delete(key);
+                        updates.push({ staffName, location, settlementKey: key, isSettled: false });
+                    }
                 });
             } else {
                 // Settle all weeks
                 weeks.forEach((_, weekIndex) => {
                     const key = getWeeklySettlementKey(staffName, location, selectedYear, selectedMonth, weekIndex);
-                    newSettled.add(key);
+                    if (!newSettled.has(key)) {
+                        newSettled.add(key);
+                        updates.push({ staffName, location, settlementKey: key, isSettled: true });
+                    }
                 });
             }
             setSettledSalaries(newSettled);
-            localStorage.setItem('settledPartTimeSalaries', JSON.stringify([...newSettled]));
+            await partTimeSettlementService.updateSettlementsBulk(updates);
+
         } else {
             // Date range: toggle all overlapping weeks
             const startDate = new Date(dateRange.start);
             const endDate = new Date(dateRange.end);
             const newSettled = new Set(settledSalaries);
             const status = getSettlementStatus(staffName, location);
+            const shouldSettle = !status.isFullySettled;
+            const updates: { staffName: string; location: string; settlementKey: string; isSettled: boolean }[] = [];
 
             let currentDate = new Date(startDate.getFullYear(), startDate.getMonth(), 1);
             while (currentDate <= endDate) {
@@ -259,10 +396,16 @@ const PartTimeStaff: React.FC<PartTimeStaffProps> = ({
                 weeks.forEach((week, weekIndex) => {
                     if (week.endDate >= startDate && week.startDate <= endDate) {
                         const key = getWeeklySettlementKey(staffName, location, year, month, weekIndex);
-                        if (status.isFullySettled) {
-                            newSettled.delete(key);
+                        if (!shouldSettle) {
+                            if (newSettled.has(key)) {
+                                newSettled.delete(key);
+                                updates.push({ staffName, location, settlementKey: key, isSettled: false });
+                            }
                         } else {
-                            newSettled.add(key);
+                            if (!newSettled.has(key)) {
+                                newSettled.add(key);
+                                updates.push({ staffName, location, settlementKey: key, isSettled: true });
+                            }
                         }
                     }
                 });
@@ -270,7 +413,7 @@ const PartTimeStaff: React.FC<PartTimeStaffProps> = ({
                 currentDate.setMonth(currentDate.getMonth() + 1);
             }
             setSettledSalaries(newSettled);
-            localStorage.setItem('settledPartTimeSalaries', JSON.stringify([...newSettled]));
+            await partTimeSettlementService.updateSettlementsBulk(updates);
         }
     };
 
@@ -319,6 +462,21 @@ const PartTimeStaff: React.FC<PartTimeStaffProps> = ({
         leavingTime: ''
     }]);
     const [bulkLocation, setBulkLocation] = useState(userLocation || settingsService.getLocations()[0] || 'Big Shop');
+    const [newStaffData, setNewStaffData] = useState<{
+        name: string;
+        location: string;
+        shift: 'Morning' | 'Evening' | 'Both';
+        salary: number;
+        arrivalTime: string;
+        leavingTime: string;
+    }>({
+        name: '',
+        location: (userLocation || 'Big Shop') as string,
+        shift: (new Date().getDay() === 0 ? 'Both' : 'Morning') as 'Morning' | 'Evening' | 'Both',
+        salary: 0,
+        arrivalTime: '',
+        leavingTime: ''
+    });
 
     // Get recent names for smart suggestions
     const getRecentNames = () => {
@@ -1512,18 +1670,19 @@ const PartTimeStaff: React.FC<PartTimeStaffProps> = ({
                                 })()}
                                 {reportType !== 'weekly' && (
                                     <>
-                                        <th className="px-3 md:px-6 py-3 md:py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Daily Attendance</th>
-                                        <th className="px-3 md:px-6 py-3 md:py-4 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Weekly Breakdown</th>
+                                        <th className="px-3 md:px-6 py-3 md:py-4 text-left text-sm font-bold text-gray-700 uppercase tracking-wider">Daily Attendance</th>
+                                        <th className="px-3 md:px-6 py-3 md:py-4 text-center text-sm font-bold text-gray-700 uppercase tracking-wider">Weekly Breakdown</th>
                                     </>
                                 )}
-                                <th className="px-3 md:px-6 py-3 md:py-4 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Total</th>
-                                <th className="px-3 md:px-6 py-3 md:py-4 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                                <th className="px-3 md:px-6 py-3 md:py-4 text-center text-sm font-bold text-gray-700 uppercase tracking-wider">Advance</th>
+                                <th className="px-3 md:px-6 py-3 md:py-4 text-right text-sm font-bold text-gray-700 uppercase tracking-wider">Earned</th>
+                                <th className="px-3 md:px-6 py-3 md:py-4 text-center text-sm font-bold text-gray-700 uppercase tracking-wider">Status</th>
                             </tr>
                         </thead>
                         <tbody className="bg-white divide-y divide-gray-200">
                             {partTimeSalaries.length === 0 ? (
                                 <tr>
-                                    <td colSpan={reportType === 'weekly' ? 13 : 8} className="px-6 py-4 text-center text-gray-500">
+                                    <td colSpan={reportType === 'weekly' ? 14 : 9} className="px-6 py-4 text-center text-gray-500 text-base">
                                         No records found for the selected period
                                     </td>
                                 </tr>
@@ -1532,6 +1691,18 @@ const PartTimeStaff: React.FC<PartTimeStaffProps> = ({
                                     const settlementStatus = getSettlementStatus(salary.staffName, salary.location);
                                     const staffSettled = settlementStatus.isFullySettled;
                                     const staffPartial = settlementStatus.isPartiallySettled;
+
+                                    // Get advance record for this week (only applicable in weekly view for input)
+                                    // For monthly/date range, we might show total advanced? 
+                                    // Requirement mainly detailed weekly logic. Let's focus on that for input.
+
+                                    const advanceKey = `${salary.staffName}-${salary.location}-${selectedYear}-${selectedMonth}-${selectedWeek}`;
+                                    const advanceRecord = advanceRecords[advanceKey];
+                                    const advanceAmount = advanceRecord?.advanceGiven || 0;
+                                    const pendingAmount = advanceRecord?.pendingSalary || 0;
+                                    const closingBalance = advanceRecord?.closingBalance || 0;
+                                    // Make sure we carry forward opening balance for display if needed? 
+                                    // For now, closing balance is what matters - "Carry this +200 forward"
 
                                     // Determine row background color
                                     let rowBgClass = 'hover:bg-gray-50';
@@ -1542,7 +1713,7 @@ const PartTimeStaff: React.FC<PartTimeStaffProps> = ({
                                     }
 
                                     return (
-                                        <tr key={`${salary.staffName}-${index}`} className={`text-xs md:text-sm ${rowBgClass}`}>
+                                        <tr key={`${salary.staffName}-${index}`} className={`text-sm md:text-base ${rowBgClass}`}>
                                             <td className="px-3 md:px-6 py-4 whitespace-nowrap">
                                                 <input
                                                     type="checkbox"
@@ -1557,7 +1728,7 @@ const PartTimeStaff: React.FC<PartTimeStaffProps> = ({
                                                         }
                                                         setSelectedStaff(newSelection);
                                                     }}
-                                                    className="rounded border-gray-300 text-purple-600 focus:ring-purple-500"
+                                                    className="rounded border-gray-300 text-purple-600 focus:ring-purple-500 w-5 h-5"
                                                 />
                                             </td>
                                             <td className="px-3 md:px-6 py-4 whitespace-nowrap text-gray-900">{index + 1}</td>
@@ -1627,42 +1798,114 @@ const PartTimeStaff: React.FC<PartTimeStaffProps> = ({
                                                     </td>
                                                 </>
                                             )}
-                                            <td className="px-3 md:px-6 py-4 whitespace-nowrap text-right font-bold text-green-600">
-                                                ₹{salary.totalEarnings}
+
+                                            {reportType === 'weekly' && (
+                                                <td className="px-3 md:px-6 py-4 whitespace-nowrap text-center">
+                                                    <AdvanceInput
+                                                        initialValue={advanceAmount}
+                                                        staffName={salary.staffName}
+                                                        location={salary.location}
+                                                        year={selectedYear}
+                                                        month={selectedMonth}
+                                                        week={selectedWeek}
+                                                        onSave={async (amount) => {
+                                                            try {
+                                                                const currentWeekInfo = getWeeksInMonth(selectedYear, selectedMonth)[selectedWeek];
+
+                                                                // Get opening balance for this week
+                                                                const openingBalance = advanceRecord?.openingBalance ||
+                                                                    await partTimeAdvanceService.getOpeningBalance(
+                                                                        salary.staffName,
+                                                                        salary.location,
+                                                                        selectedYear,
+                                                                        selectedMonth,
+                                                                        selectedWeek
+                                                                    );
+
+                                                                await partTimeAdvanceService.upsert({
+                                                                    staffName: salary.staffName,
+                                                                    location: salary.location,
+                                                                    year: selectedYear,
+                                                                    month: selectedMonth,
+                                                                    weekNumber: selectedWeek,
+                                                                    weekStartDate: currentWeekInfo.startDate.toISOString().split('T')[0],
+                                                                    openingBalance: openingBalance,
+                                                                    earnings: salary.totalEarnings,
+                                                                    adjustment: 0,
+                                                                    advanceGiven: amount,
+                                                                    closingBalance: 0,
+                                                                    pendingSalary: 0
+                                                                });
+
+                                                                loadAdvanceData();
+                                                            } catch (error) {
+                                                                console.error('Failed to save advance', error);
+                                                            }
+                                                        }}
+                                                    />
+                                                </td>
+                                            )}
+                                            {reportType !== 'weekly' && (
+                                                <td className="px-3 md:px-6 py-4 whitespace-nowrap text-center text-gray-700 font-medium">
+                                                    {aggregatedAdvances[`${salary.staffName}-${salary.location}`] > 0
+                                                        ? `₹${aggregatedAdvances[`${salary.staffName}-${salary.location}`]}`
+                                                        : '-'}
+                                                </td>
+                                            )}
+                                            <td className="px-3 md:px-6 py-4 whitespace-nowrap text-right font-bold text-green-600 text-lg">
+                                                {(() => {
+                                                    const advance = reportType === 'weekly'
+                                                        ? (advanceRecords[`${salary.staffName}-${salary.location}-${selectedYear}-${selectedMonth}-${selectedWeek}`]?.advanceGiven || 0)
+                                                        : (aggregatedAdvances[`${salary.staffName}-${salary.location}`] || 0);
+                                                    return `₹${Math.max(0, salary.totalEarnings - advance)}`;
+                                                })()}
                                             </td>
                                             <td className="px-3 md:px-6 py-4 whitespace-nowrap text-center">
-                                                {staffSettled ? (
-                                                    <button
-                                                        onClick={() => toggleSettlement(salary.staffName, salary.location)}
-                                                        className="inline-flex items-center gap-1 px-3 py-1.5 bg-green-100 text-green-700 rounded-lg hover:bg-green-200 transition-colors text-xs font-medium"
-                                                        title="Click to revert all weeks"
-                                                    >
-                                                        <CheckCircle size={14} />
-                                                        <span>Settled</span>
-                                                        <RotateCcw size={12} className="ml-1 opacity-60" />
-                                                    </button>
-                                                ) : staffPartial ? (
-                                                    <div className="flex flex-col items-center gap-1">
+                                                <div className="flex flex-col items-center gap-2">
+                                                    {staffSettled ? (
                                                         <button
                                                             onClick={() => toggleSettlement(salary.staffName, salary.location)}
-                                                            className="inline-flex items-center gap-1 px-3 py-1.5 bg-yellow-100 text-yellow-700 rounded-lg hover:bg-yellow-200 transition-colors text-xs font-medium"
-                                                            title="Click to settle all remaining weeks"
+                                                            className="inline-flex items-center gap-1 px-3 py-1.5 bg-green-100 text-green-700 rounded-lg hover:bg-green-200 transition-colors text-sm font-medium"
+                                                            title="Click to revert"
                                                         >
-                                                            <span>Partial ({settlementStatus.settledCount}/{settlementStatus.totalWeeks})</span>
+                                                            <CheckCircle size={16} />
+                                                            <span>Settled</span>
                                                         </button>
-                                                        <span className="text-[10px] text-gray-500">
-                                                            {settlementStatus.settledWeeks.map(w => `W${w + 1}`).join(', ')} ✓
-                                                        </span>
-                                                    </div>
-                                                ) : (
-                                                    <button
-                                                        onClick={() => toggleSettlement(salary.staffName, salary.location)}
-                                                        className="inline-flex items-center gap-1 px-3 py-1.5 bg-gray-100 text-gray-600 rounded-lg hover:bg-purple-100 hover:text-purple-700 transition-colors text-xs font-medium"
-                                                        title={reportType === 'weekly' ? 'Click to mark as settled' : 'Click to settle all weeks'}
-                                                    >
-                                                        <span>Settle</span>
-                                                    </button>
-                                                )}
+                                                    ) : (
+                                                        <div className="flex flex-col gap-1">
+                                                            <button
+                                                                onClick={() => toggleSettlement(salary.staffName, salary.location)}
+                                                                className="inline-flex items-center gap-1 px-3 py-1.5 bg-gray-100 text-gray-700 rounded-lg hover:bg-purple-100 hover:text-purple-700 transition-colors text-sm font-medium"
+                                                            >
+                                                                <span>Settle</span>
+                                                            </button>
+
+                                                            {/* Status Info based on Advance */}
+                                                            {reportType === 'weekly' && (
+                                                                <div className="text-xs font-medium">
+                                                                    {pendingAmount > 0 && (
+                                                                        <span className="text-green-600 block">
+                                                                            Pay Pending: ₹{pendingAmount}
+                                                                        </span>
+                                                                    )}
+                                                                    {closingBalance > 0 && (
+                                                                        <span className="text-red-500 block">
+                                                                            Carry Fwd: ₹{closingBalance}
+                                                                            <span className="text-gray-400 font-normal ml-1">
+                                                                                (Owes)
+                                                                            </span>
+                                                                        </span>
+                                                                    )}
+                                                                    {advanceAmount > 0 && pendingAmount === 0 && closingBalance === 0 && (
+                                                                        <span className="text-gray-500 block">
+                                                                            Fully Adjusted
+                                                                        </span>
+                                                                    )}
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                    )}
+                                                </div>
                                             </td>
                                         </tr>
                                     );
@@ -1671,11 +1914,204 @@ const PartTimeStaff: React.FC<PartTimeStaffProps> = ({
                         </tbody>
                         <tfoot className="bg-gray-50 font-bold">
                             <tr>
-                                <td colSpan={reportType === 'weekly' ? (getWeeksInMonth(selectedYear, selectedMonth)[selectedWeek] ? 4 + (getWeeksInMonth(selectedYear, selectedMonth)[selectedWeek].endDay - getWeeksInMonth(selectedYear, selectedMonth)[selectedWeek].startDay + 1) : 11) : 6} className="px-3 md:px-6 py-4 text-right text-gray-900">Total Payout:</td>
-                                <td className="px-3 md:px-6 py-4 text-right text-green-600">₹{totalPartTimeEarnings}</td>
+                                <td colSpan={reportType === 'weekly' ? (getWeeksInMonth(selectedYear, selectedMonth)[selectedWeek] ? 4 + (getWeeksInMonth(selectedYear, selectedMonth)[selectedWeek].endDay - getWeeksInMonth(selectedYear, selectedMonth)[selectedWeek].startDay + 1) : 11) : 6} className="px-3 md:px-6 py-4 text-right text-base text-gray-900">Total Net Payable:</td>
+                                <td className="px-3 md:px-6 py-4 text-right text-green-600 text-lg">
+                                    ₹{partTimeSalaries.reduce((sum, salary) => {
+                                        const advance = reportType === 'weekly'
+                                            ? (advanceRecords[`${salary.staffName}-${salary.location}-${selectedYear}-${selectedMonth}-${selectedWeek}`]?.advanceGiven || 0)
+                                            : (aggregatedAdvances[`${salary.staffName}-${salary.location}`] || 0);
+                                        return sum + Math.max(0, salary.totalEarnings - advance);
+                                    }, 0)}
+                                </td>
+                                <td></td>
                                 <td></td>
                             </tr>
                         </tfoot>
+                    </table>
+                </div>
+            </div>
+
+            {/* Past Salary & Advance Report */}
+            <div className="bg-white rounded-lg shadow p-6 mt-8 mb-8">
+                <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                    <Calendar size={20} className="text-purple-600" />
+                    Past Salary & Advance Report
+                </h2>
+
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Staff Name</label>
+                        <select
+                            value={reportStaffFilter}
+                            onChange={(e) => setReportStaffFilter(e.target.value)}
+                            className="w-full rounded-md border-gray-300 shadow-sm focus:border-purple-500 focus:ring-purple-500"
+                        >
+                            <option value="All">All Staff</option>
+                            {Array.from(new Set([
+                                ...attendance.filter(r => r.isPartTime).map(r => r.staffName || '')
+                            ].filter(Boolean))).sort().map(name => (
+                                <option key={name} value={name}>{name}</option>
+                            ))}
+                        </select>
+                    </div>
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">From Date</label>
+                        <input
+                            type="date"
+                            value={reportStartDate}
+                            onChange={(e) => setReportStartDate(e.target.value)}
+                            className="w-full rounded-md border-gray-300 shadow-sm focus:border-purple-500 focus:ring-purple-500"
+                        />
+                    </div>
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">To Date</label>
+                        <input
+                            type="date"
+                            value={reportEndDate}
+                            onChange={(e) => setReportEndDate(e.target.value)}
+                            className="w-full rounded-md border-gray-300 shadow-sm focus:border-purple-500 focus:ring-purple-500"
+                        />
+                    </div>
+                    <div className="flex items-end gap-2">
+                        <button
+                            onClick={loadPastReport}
+                            className="flex-1 bg-purple-600 text-white px-4 py-2 rounded-md hover:bg-purple-700 transition-colors flex items-center justify-center gap-2"
+                        >
+                            <Search size={18} />
+                            Generate
+                        </button>
+                        <div className="flex rounded-md shadow-sm" role="group">
+                            <button
+                                type="button"
+                                onClick={() => setReportViewType('Detailed')}
+                                className={`px-4 py-2 text-sm font-medium rounded-l-lg border ${reportViewType === 'Detailed' ? 'bg-purple-100 text-purple-700 border-purple-200' : 'bg-white text-gray-700 border-gray-200 hover:bg-gray-50'}`}
+                            >
+                                Detailed
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => setReportViewType('Summary')}
+                                className={`px-4 py-2 text-sm font-medium rounded-r-lg border ${reportViewType === 'Summary' ? 'bg-purple-100 text-purple-700 border-purple-200' : 'bg-white text-gray-700 border-gray-200 hover:bg-gray-50'}`}
+                            >
+                                Summary
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <div className="overflow-x-auto">
+                    <table className="min-w-full divide-y divide-gray-200">
+                        <thead className="bg-gray-50">
+                            <tr>
+                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Staff / Location</th>
+                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    {reportViewType === 'Detailed' ? 'Period' : 'Summary Period'}
+                                </th>
+                                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Opening Bal</th>
+                                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Earned</th>
+                                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Advance</th>
+                                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Adjusted</th>
+                                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Closing Bal</th>
+                                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Pending Pay</th>
+                            </tr>
+                        </thead>
+                        <tbody className="bg-white divide-y divide-gray-200">
+                            {isReportLoading ? (
+                                <tr><td colSpan={8} className="px-6 py-4 text-center text-gray-500">Loading...</td></tr>
+                            ) : pastReportData.length === 0 ? (
+                                <tr><td colSpan={8} className="px-6 py-4 text-center text-gray-500">No records found</td></tr>
+                            ) : reportViewType === 'Detailed' ? (
+                                pastReportData.map((record) => (
+                                    <tr key={record.id} className="hover:bg-gray-50">
+                                        <td className="px-6 py-4 whitespace-nowrap">
+                                            <div className="font-medium text-gray-900">{record.staffName}</div>
+                                            <div className="text-xs text-gray-500">{record.location}</div>
+                                        </td>
+                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                            W{record.weekNumber + 1}, {new Date(0, record.month).toLocaleString('default', { month: 'short' })} {record.year}
+                                        </td>
+                                        <td className="px-6 py-4 whitespace-nowrap text-right text-sm text-gray-900">₹{record.openingBalance}</td>
+                                        <td className="px-6 py-4 whitespace-nowrap text-right text-sm text-green-600 font-medium">₹{record.earnings}</td>
+                                        <td className="px-6 py-4 whitespace-nowrap text-right text-sm text-gray-900">₹{record.advanceGiven}</td>
+                                        <td className="px-6 py-4 whitespace-nowrap text-right text-sm text-gray-900">₹{record.adjustment}</td>
+                                        <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium text-red-600">
+                                            {record.closingBalance > 0 ? `₹${record.closingBalance}` : '-'}
+                                        </td>
+                                        <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium text-green-600">
+                                            {record.pendingSalary > 0 ? `₹${record.pendingSalary}` : '-'}
+                                        </td>
+                                    </tr>
+                                ))
+                            ) : (
+                                // Summary View Interaction
+                                Object.values(pastReportData.reduce((acc: Record<string, PartTimeAdvanceRecord & { count: number }>, curr: PartTimeAdvanceRecord) => {
+                                    const key = `${curr.staffName}-${curr.location}`;
+                                    if (!acc[key]) {
+                                        acc[key] = {
+                                            ...curr,
+                                            openingBalance: curr.openingBalance, // First record opening
+                                            earnings: 0,
+                                            advanceGiven: 0,
+                                            adjustment: 0,
+                                            closingBalance: 0,
+                                            pendingSalary: 0,
+                                            count: 0
+                                        };
+                                    }
+                                    const group = acc[key];
+                                    // Aggregate
+                                    group.earnings += curr.earnings;
+                                    group.advanceGiven += curr.advanceGiven;
+                                    group.adjustment += curr.adjustment;
+                                    // For closing/pending, we want the LAST record state
+                                    // But since reduce order isn't guaranteed if not sorted, we should rely on dates.
+                                    // Luckily API returns sorted by date.
+                                    group.closingBalance = curr.closingBalance;
+                                    group.pendingSalary = curr.pendingSalary;
+                                    group.count += 1;
+                                    return acc;
+                                }, {} as Record<string, any>)).map((group: any, idx) => (
+                                    <tr key={idx} className="hover:bg-gray-50 font-medium">
+                                        <td className="px-6 py-4 whitespace-nowrap">
+                                            <div className="font-bold text-gray-900">{group.staffName}</div>
+                                            <div className="text-xs text-gray-500">{group.location}</div>
+                                        </td>
+                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 italic">
+                                            Summary of {group.count} weeks
+                                        </td>
+                                        <td className="px-6 py-4 whitespace-nowrap text-right text-sm text-gray-900">₹{group.openingBalance}</td>
+                                        <td className="px-6 py-4 whitespace-nowrap text-right text-sm text-green-600">₹{group.earnings}</td>
+                                        <td className="px-6 py-4 whitespace-nowrap text-right text-sm text-gray-900">₹{group.advanceGiven}</td>
+                                        <td className="px-6 py-4 whitespace-nowrap text-right text-sm text-gray-900">₹{group.adjustment}</td>
+                                        <td className="px-6 py-4 whitespace-nowrap text-right text-sm text-red-600 font-bold">
+                                            {group.closingBalance > 0 ? `₹${group.closingBalance}` : '-'}
+                                        </td>
+                                        <td className="px-6 py-4 whitespace-nowrap text-right text-sm text-green-600 font-bold">
+                                            {group.pendingSalary > 0 ? `₹${group.pendingSalary}` : '-'}
+                                        </td>
+                                    </tr>
+                                ))
+                            )}
+                        </tbody>
+                        {pastReportData.length > 0 && (
+                            <tfoot className="bg-gray-50 font-bold">
+                                <tr>
+                                    <td colSpan={2} className="px-6 py-4 text-right">Total:</td>
+                                    {/* For totals, opening balance total is tricky (sum of openings? or just openings of unique staff?). 
+                                        Usually Sum of Openings of filtered period. */}
+                                    <td className="px-6 py-4 text-right">
+                                        {reportViewType === 'Detailed'
+                                            ? `₹${pastReportData.reduce((s, r) => s + r.openingBalance, 0)}`
+                                            : '-' /* Summary total opening is ambiguous */}
+                                    </td>
+                                    <td className="px-6 py-4 text-right">₹{pastReportData.reduce((s, r) => s + r.earnings, 0)}</td>
+                                    <td className="px-6 py-4 text-right">₹{pastReportData.reduce((s, r) => s + r.advanceGiven, 0)}</td>
+                                    <td className="px-6 py-4 text-right">₹{pastReportData.reduce((s, r) => s + r.adjustment, 0)}</td>
+                                    <td className="px-6 py-4 text-right">₹{pastReportData.reduce((s, r) => s + (reportViewType === 'Detailed' ? r.closingBalance : 0), 0)}</td>
+                                    <td className="px-6 py-4 text-right">₹{pastReportData.reduce((s, r) => s + (reportViewType === 'Detailed' ? r.pendingSalary : 0), 0)}</td>
+                                </tr>
+                            </tfoot>
+                        )}
                     </table>
                 </div>
             </div>
@@ -1688,7 +2124,12 @@ const PartTimeStaff: React.FC<PartTimeStaffProps> = ({
                             <DollarSign className="text-blue-600" size={20} />
                             Currency Note Breakdown
                         </div>
-                        <span className="text-green-600">Total: ₹{totalPartTimeEarnings}</span>
+                        <span className="text-green-600">Total Net Payable: ₹{partTimeSalaries.reduce((sum, salary) => {
+                            const advance = reportType === 'weekly'
+                                ? (advanceRecords[`${salary.staffName}-${salary.location}-${selectedYear}-${selectedMonth}-${selectedWeek}`]?.advanceGiven || 0)
+                                : (aggregatedAdvances[`${salary.staffName}-${salary.location}`] || 0);
+                            return sum + Math.max(0, salary.totalEarnings - advance);
+                        }, 0)}</span>
                     </h3>
                     <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
                         {sortedDenominations.map(denom => (
