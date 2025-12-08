@@ -459,7 +459,8 @@ const PartTimeStaff: React.FC<PartTimeStaffProps> = ({
         shift: (new Date().getDay() === 0 ? 'Both' : 'Morning') as 'Morning' | 'Evening' | 'Both',
         salary: 0,
         arrivalTime: '',
-        leavingTime: ''
+        // Sunday = Both shift = 21:30, Other days = Morning shift = 15:00
+        leavingTime: new Date().getDay() === 0 ? '21:30' : '15:00'
     }]);
     const [bulkLocation, setBulkLocation] = useState(userLocation || settingsService.getLocations()[0] || 'Big Shop');
     const [newStaffData, setNewStaffData] = useState<{
@@ -475,7 +476,8 @@ const PartTimeStaff: React.FC<PartTimeStaffProps> = ({
         shift: (new Date().getDay() === 0 ? 'Both' : 'Morning') as 'Morning' | 'Evening' | 'Both',
         salary: 0,
         arrivalTime: '',
-        leavingTime: ''
+        // Sunday = Both shift = 21:30, Other days = Morning shift = 15:00
+        leavingTime: new Date().getDay() === 0 ? '21:30' : '15:00'
     });
 
     // Get recent names for smart suggestions
@@ -672,7 +674,8 @@ const PartTimeStaff: React.FC<PartTimeStaffProps> = ({
             shift: (new Date().getDay() === 0 ? 'Both' : 'Morning') as 'Morning' | 'Evening' | 'Both',
             salary: 0,
             arrivalTime: '',
-            leavingTime: ''
+            // Sunday = Both shift = 21:30, Other days = Morning shift = 15:00
+            leavingTime: new Date().getDay() === 0 ? '21:30' : '15:00'
         }]);
     };
 
@@ -685,6 +688,14 @@ const PartTimeStaff: React.FC<PartTimeStaffProps> = ({
     const handleBulkRowChange = (index: number, field: string, value: any) => {
         const newList = [...bulkStaffList];
         (newList[index] as any)[field] = value;
+
+        // Auto-update leaving time when shift changes
+        if (field === 'shift') {
+            const newShift = value as 'Morning' | 'Evening' | 'Both';
+            // Morning = 3:00 PM (15:00), Both/Evening = 9:30 PM (21:30)
+            newList[index].leavingTime = newShift === 'Morning' ? '15:00' : '21:30';
+        }
+
         setBulkStaffList(newList);
     };
 
@@ -802,9 +813,17 @@ const PartTimeStaff: React.FC<PartTimeStaffProps> = ({
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const totalPartTimeEarnings = selectedSalaries.reduce((sum, salary) => sum + salary.totalEarnings, 0);
 
-    // Calculate currency breakdown
+    // Calculate currency breakdown - use NET payable (after advance deduction) for each staff
     const currencyBreakdown = (selectedStaff.size > 0 ? selectedSalaries : partTimeSalaries).reduce((acc, salary) => {
-        const breakdown = getCurrencyBreakdown(salary.totalEarnings);
+        // Calculate advance deduction for this staff member
+        const advance = reportType === 'weekly'
+            ? (advanceRecords[`${salary.staffName}-${salary.location}-${selectedYear}-${selectedMonth}-${selectedWeek}`]?.advanceGiven || 0)
+            : (aggregatedAdvances[`${salary.staffName}-${salary.location}`] || 0);
+
+        // Use NET payable (after advance) instead of raw totalEarnings
+        const netPayable = Math.max(0, salary.totalEarnings - advance);
+
+        const breakdown = getCurrencyBreakdown(netPayable);
         Object.entries(breakdown).forEach(([denom, count]) => {
             const d = Number(denom);
             acc[d] = (acc[d] || 0) + count;

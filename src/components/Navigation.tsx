@@ -84,47 +84,125 @@ const Navigation: React.FC<NavigationProps> = ({ activeTab, setActiveTab, user, 
         </div>
       </div>
 
-      {/* Mobile Top Bar */}
-      <nav className="md:hidden bg-white shadow-sm border-b border-gray-200 sticky top-0 z-50 px-4 py-3">
+      {/* Mobile Top Bar - Enhanced */}
+      <nav className="md:hidden sticky top-0 z-50 px-4 py-3"
+        style={{
+          background: 'rgba(255, 255, 255, 0.92)',
+          backdropFilter: 'blur(24px) saturate(180%)',
+          WebkitBackdropFilter: 'blur(24px) saturate(180%)',
+          borderBottom: '1px solid rgba(0, 0, 0, 0.06)',
+          boxShadow: '0 2px 16px rgba(0, 0, 0, 0.04)'
+        }}>
         <div className="flex items-center justify-between">
-          <h1 className="text-lg font-bold text-gray-800">Staff Management</h1>
-          <div className="flex items-center gap-2">
+          <h1 className="text-lg font-bold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">
+            Staff Management
+          </h1>
+          <div className="flex items-center gap-3">
             <div className="text-right">
-              <div className="text-xs font-medium text-gray-800">
+              <div className="text-xs font-semibold text-gray-700">
                 {user.role === 'admin' ? 'Admin' : user.location}
               </div>
             </div>
             <button
               onClick={onLogout}
-              className="p-2 text-gray-600 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+              className="p-2.5 text-gray-500 hover:text-red-500 rounded-xl transition-all duration-200 active:scale-90"
+              style={{
+                background: 'rgba(239, 68, 68, 0.08)'
+              }}
             >
-              <LogOut size={16} />
+              <LogOut size={18} />
             </button>
           </div>
         </div>
       </nav>
 
-      {/* Mobile Bottom Navigation */}
-      <div className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 px-2 py-2 z-50">
-        <div className="flex justify-around">
+      {/* Mobile Bottom Navigation - Premium Glassmorphism Design */}
+      <div
+        className="md:hidden fixed bottom-0 left-0 right-0 z-50 safe-area-padding"
+        style={{
+          background: 'rgba(255, 255, 255, 0.92)',
+          backdropFilter: 'blur(24px) saturate(180%)',
+          WebkitBackdropFilter: 'blur(24px) saturate(180%)',
+          borderTop: '1px solid rgba(255, 255, 255, 0.6)',
+          boxShadow: '0 -8px 32px rgba(0, 0, 0, 0.08)',
+          paddingBottom: 'max(8px, env(safe-area-inset-bottom))'
+        }}
+      >
+        <div
+          className="flex justify-around items-end px-2 pt-2"
+          style={{ minHeight: '64px' }}
+        >
           {tabs.map((tab) => {
             const Icon = tab.icon;
+            const isActive = activeTab === tab.id;
+
             return (
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
-                className={`flex flex-col items-center justify-center px-2 py-2 rounded-lg transition-all duration-200 ${activeTab === tab.id
-                  ? 'bg-blue-500 text-white shadow-lg'
-                  : 'text-gray-600 hover:text-blue-600 hover:bg-blue-50'
-                  }`}
+                className="flex flex-col items-center justify-center relative px-3 py-2 rounded-2xl transition-all duration-300"
+                style={{
+                  minWidth: '64px',
+                  transform: isActive ? 'translateY(-4px)' : 'translateY(0)',
+                  transition: 'all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1)'
+                }}
               >
-                <Icon size={20} />
-                <span className="text-xs mt-1 font-medium">{tab.label}</span>
+                {/* Active indicator background */}
+                {isActive && (
+                  <div
+                    className="absolute inset-0 rounded-2xl"
+                    style={{
+                      background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                      boxShadow: '0 4px 20px rgba(102, 126, 234, 0.4)',
+                      animation: 'pulse-glow 2s ease-in-out infinite'
+                    }}
+                  />
+                )}
+
+                {/* Icon container with glow effect */}
+                <div
+                  className="relative z-10 flex items-center justify-center mb-1"
+                  style={{
+                    filter: isActive ? 'drop-shadow(0 2px 8px rgba(255, 255, 255, 0.4))' : 'none'
+                  }}
+                >
+                  <Icon
+                    size={22}
+                    className={`transition-all duration-300 ${isActive ? 'text-white' : 'text-gray-500'
+                      }`}
+                    style={{
+                      strokeWidth: isActive ? 2.5 : 2
+                    }}
+                  />
+                </div>
+
+                {/* Label */}
+                <span
+                  className={`relative z-10 text-[10px] font-semibold tracking-tight transition-all duration-300 ${isActive ? 'text-white' : 'text-gray-500'
+                    }`}
+                  style={{
+                    textShadow: isActive ? '0 1px 4px rgba(0, 0, 0, 0.1)' : 'none'
+                  }}
+                >
+                  {tab.label}
+                </span>
               </button>
             );
           })}
         </div>
       </div>
+
+      {/* CSS Animation for active tab glow */}
+      <style>{`
+        @keyframes pulse-glow {
+          0%, 100% {
+            box-shadow: 0 4px 20px rgba(102, 126, 234, 0.4);
+          }
+          50% {
+            box-shadow: 0 4px 28px rgba(102, 126, 234, 0.6);
+          }
+        }
+      `}</style>
     </>
   );
 };

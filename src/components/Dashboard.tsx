@@ -212,6 +212,9 @@ const Dashboard: React.FC<DashboardProps> = ({ staff, attendance, selectedDate, 
               ...locationEvening.map(record => `${record.staffName} (Evening)`)
             ];
 
+            // Get total full-time staff count at this location
+            const locationTotalFullTimeStaff = fullTimeStaff.filter(s => s.location === location.name).length;
+
             // Get full-time staff with detailed names (including shift info for half-day)
             const locationFullTimePresent = fullTimeAttendance.filter(record => {
               const staffMember = activeStaff.find(s => s.id === record.staffId);
@@ -250,7 +253,7 @@ const Dashboard: React.FC<DashboardProps> = ({ staff, attendance, selectedDate, 
 
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                   <div className="bg-green-50 p-3 md:p-4 rounded-lg">
-                    <p className="text-base md:text-lg font-bold text-green-600 mb-1">Present: {locationFullTimePresent.length}</p>
+                    <p className="text-base md:text-lg font-bold text-green-600 mb-1">Present: {locationFullTimePresent.length}/{locationTotalFullTimeStaff}</p>
                     <p className="text-sm text-gray-600">
                       {locationFullTimePresent.length > 0 ? locationFullTimePresent.join(', ') : 'None'}
                     </p>
@@ -332,7 +335,7 @@ const Dashboard: React.FC<DashboardProps> = ({ staff, attendance, selectedDate, 
 
               <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                 <div className="bg-green-50 p-3 md:p-4 rounded-lg">
-                  <p className="text-base md:text-lg font-bold text-green-600 mb-1">Present: {overallFullTimePresent.length}</p>
+                  <p className="text-base md:text-lg font-bold text-green-600 mb-1">Present: {overallFullTimePresent.length}/{fullTimeStaff.length}</p>
                   <p className="text-sm text-gray-600">
                     {overallFullTimePresent.length > 0 ? overallFullTimePresent.join(', ') : 'None'}
                   </p>

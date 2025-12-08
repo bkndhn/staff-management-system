@@ -588,11 +588,50 @@ function App() {
   const renderContent = () => {
     if (loading) {
       return (
-        <div className="flex items-center justify-center min-h-screen">
+        <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-slate-50 to-slate-100">
           <div className="text-center">
-            <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600 mx-auto"></div>
-            <p className="mt-4 text-gray-600">Loading data from database...</p>
+            <div
+              className="mx-auto mb-6"
+              style={{
+                width: '56px',
+                height: '56px',
+                borderRadius: '50%',
+                background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                padding: '3px',
+                animation: 'spin 1s linear infinite'
+              }}
+            >
+              <div
+                style={{
+                  width: '100%',
+                  height: '100%',
+                  borderRadius: '50%',
+                  background: 'white',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center'
+                }}
+              >
+                <div
+                  style={{
+                    width: '40px',
+                    height: '40px',
+                    borderRadius: '50%',
+                    border: '3px solid transparent',
+                    borderTopColor: '#667eea',
+                    animation: 'spin 0.8s linear infinite reverse'
+                  }}
+                />
+              </div>
+            </div>
+            <p className="text-gray-600 font-medium">Loading...</p>
+            <p className="text-gray-400 text-sm mt-1">Fetching data from database</p>
           </div>
+          <style>{`
+            @keyframes spin {
+              to { transform: rotate(360deg); }
+            }
+          `}</style>
         </div>
       );
     }
