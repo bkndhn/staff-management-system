@@ -511,30 +511,29 @@ const SalaryManagement: React.FC<SalaryManagementProps> = ({
         </div>
       </div>
 
-      {/* Month/Year Selection */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-        <h2 className="text-xl font-bold text-gray-800 mb-4 text-center">Select Month and Year</h2>
-        <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Month</label>
+      {/* Month/Year/Location Selection - Compact Single Row */}
+      <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-3 md:p-4">
+        <div className="flex flex-row items-center justify-center gap-2 md:gap-4 flex-wrap">
+          <div className="flex items-center gap-1">
+            <label className="text-xs font-medium text-gray-600 hidden sm:inline">Month:</label>
             <select
               value={selectedMonth}
               onChange={(e) => setSelectedMonth(Number(e.target.value))}
-              className="w-full sm:w-auto px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="px-2 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             >
               {Array.from({ length: 12 }, (_, i) => (
                 <option key={i} value={i}>
-                  {new Date(0, i).toLocaleString('default', { month: 'long' })}
+                  {new Date(0, i).toLocaleString('default', { month: 'short' })}
                 </option>
               ))}
             </select>
           </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Year</label>
+          <div className="flex items-center gap-1">
+            <label className="text-xs font-medium text-gray-600 hidden sm:inline">Year:</label>
             <select
               value={selectedYear}
               onChange={(e) => setSelectedYear(Number(e.target.value))}
-              className="w-full sm:w-auto px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="px-2 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             >
               {Array.from({ length: 5 }, (_, i) => (
                 <option key={i} value={new Date().getFullYear() - 2 + i}>
@@ -543,12 +542,12 @@ const SalaryManagement: React.FC<SalaryManagementProps> = ({
               ))}
             </select>
           </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Location</label>
+          <div className="flex items-center gap-1">
+            <label className="text-xs font-medium text-gray-600 hidden sm:inline">Location:</label>
             <select
               value={locationFilter}
               onChange={(e) => setLocationFilter(e.target.value as 'All' | 'Big Shop' | 'Small Shop' | 'Godown')}
-              className="w-full sm:w-auto px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="px-2 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             >
               <option value="All">All Locations</option>
               {locations.map(loc => (<option key={loc.id} value={loc.name}>{loc.name}</option>))}
@@ -705,7 +704,7 @@ const SalaryManagement: React.FC<SalaryManagementProps> = ({
                 const tempData = tempAdvances[detail.staffId];
 
                 return (
-                  <tr key={detail.staffId} className="hover:bg-gray-50 text-xs md:text-sm">
+                  <tr key={detail.staffId} className="hover:bg-gray-50 text-sm md:text-base">
                     <td className="px-2 md:px-4 py-3 whitespace-nowrap text-gray-900">{index + 1}</td>
                     <td className="px-2 md:px-4 py-3 whitespace-nowrap font-medium text-gray-900 sticky left-0 z-10 bg-white">
                       {staffMember?.name}

@@ -129,7 +129,7 @@ const Navigation: React.FC<NavigationProps> = ({ activeTab, setActiveTab, user, 
         }}
       >
         <div
-          className="flex justify-around items-end px-2 pt-2"
+          className="flex justify-around items-end px-1 pt-2"
           style={{ minHeight: '64px' }}
         >
           {tabs.map((tab) => {
@@ -140,9 +140,10 @@ const Navigation: React.FC<NavigationProps> = ({ activeTab, setActiveTab, user, 
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
-                className="flex flex-col items-center justify-center relative px-3 py-2 rounded-2xl transition-all duration-300"
+                className="flex flex-col items-center justify-center relative px-1 py-2 rounded-2xl transition-all duration-300 flex-1"
                 style={{
-                  minWidth: '64px',
+                  minWidth: '48px',
+                  maxWidth: '72px',
                   transform: isActive ? 'translateY(-4px)' : 'translateY(0)',
                   transition: 'all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1)'
                 }}
@@ -207,4 +208,4 @@ const Navigation: React.FC<NavigationProps> = ({ activeTab, setActiveTab, user, 
   );
 };
 
-export default Navigation;
+export default React.memo(Navigation);

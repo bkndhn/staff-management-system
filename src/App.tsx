@@ -1,12 +1,8 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo, Suspense } from 'react';
 import Navigation from './components/Navigation';
 import Login from './components/Login';
 import Dashboard from './components/Dashboard';
-import StaffManagement from './components/StaffManagement';
 import AttendanceTracker from './components/AttendanceTracker';
-import SalaryManagement from './components/SalaryManagement';
-import PartTimeStaff from './components/PartTimeStaff';
-import OldStaffRecords from './components/OldStaffRecords';
 import SalaryHikeModal from './components/SalaryHikeModal';
 import { Staff, Attendance, OldStaffRecord, SalaryHike, NavigationTab, AdvanceDeduction, User } from './types';
 import { staffService } from './services/staffService';
@@ -14,9 +10,22 @@ import { attendanceService } from './services/attendanceService';
 import { advanceService } from './services/advanceService';
 import { oldStaffService } from './services/oldStaffService';
 import { salaryHikeService } from './services/salaryHikeService';
-import { settingsService } from './services/settingsService';
 import { isSunday } from './utils/salaryCalculations';
 import { isSupabaseConfigured } from './lib/supabase';
+
+// Lazy load heavy components for faster initial load
+const StaffManagement = React.lazy(() => import('./components/StaffManagement'));
+const SalaryManagement = React.lazy(() => import('./components/SalaryManagement'));
+const PartTimeStaff = React.lazy(() => import('./components/PartTimeStaff'));
+const OldStaffRecords = React.lazy(() => import('./components/OldStaffRecords'));
+
+// Loading fallback for lazy-loaded components
+const ComponentLoader = () => (
+  <div className="flex items-center justify-center p-8">
+    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+  </div>
+);
+
 
 function App() {
   const [user, setUser] = useState<User | null>(null);
@@ -113,18 +122,18 @@ function App() {
     setActiveTab('Dashboard');
   };
 
-  // Filter staff based on user role and location
-  const getFilteredStaff = () => {
+  // Filter staff based on user role and location - memoized for performance
+  const filteredStaff = useMemo(() => {
     if (user?.role === 'admin') {
       return staff;
     } else if (user?.role === 'manager' && user.location) {
       return staff.filter(member => member.location === user.location);
     }
     return [];
-  };
+  }, [staff, user?.role, user?.location]);
 
-  // Filter attendance based on user role and location
-  const getFilteredAttendance = () => {
+  // Filter attendance based on user role and location - memoized for performance
+  const filteredAttendance = useMemo(() => {
     if (user?.role === 'admin') {
       return attendance;
     } else if (user?.role === 'manager' && user.location) {
@@ -139,7 +148,7 @@ function App() {
       );
     }
     return [];
-  };
+  }, [attendance, staff, user?.role, user?.location]);
 
   // Auto-carry forward advances from previous month
   useEffect(() => {
@@ -636,16 +645,16 @@ function App() {
       );
     }
 
-    const filteredStaff = getFilteredStaff();
-    const filteredAttendance = getFilteredAttendance();
+    const filteredStaffData = filteredStaff;
+    const filteredAttendanceData = filteredAttendance;
 
     switch (activeTab) {
       case 'Dashboard':
         if (user?.role !== 'admin') return null;
         return (
           <Dashboard
-            staff={filteredStaff}
-            attendance={filteredAttendance}
+            staff={filteredStaffData}
+            attendance={filteredAttendanceData}
             selectedDate={selectedDate}
             onDateChange={setSelectedDate}
           />
@@ -653,20 +662,22 @@ function App() {
       case 'Staff Management':
         if (user?.role !== 'admin') return null;
         return (
-          <StaffManagement
-            staff={filteredStaff}
-            salaryHikes={salaryHikes}
-            onAddStaff={addStaff}
-            onUpdateStaff={updateStaff}
-            onDeleteStaff={deleteStaff}
-            onUpdateStaffOrder={handleUpdateStaffOrder}
-          />
+          <Suspense fallback={<ComponentLoader />}>
+            <StaffManagement
+              staff={filteredStaffData}
+              salaryHikes={salaryHikes}
+              onAddStaff={addStaff}
+              onUpdateStaff={updateStaff}
+              onDeleteStaff={deleteStaff}
+              onUpdateStaffOrder={handleUpdateStaffOrder}
+            />
+          </Suspense>
         );
       case 'Attendance':
         return (
           <AttendanceTracker
-            staff={filteredStaff}
-            attendance={filteredAttendance}
+            staff={filteredStaffData}
+            attendance={filteredAttendanceData}
             selectedDate={selectedDate}
             onDateChange={setSelectedDate}
             onUpdateAttendance={updateAttendance}
@@ -677,31 +688,37 @@ function App() {
       case 'Salary Management':
         if (user?.role !== 'admin') return null;
         return (
-          <SalaryManagement
-            staff={filteredStaff}
-            attendance={filteredAttendance}
-            advances={advances}
-            onUpdateAdvances={updateAdvances}
-          />
+          <Suspense fallback={<ComponentLoader />}>
+            <SalaryManagement
+              staff={filteredStaffData}
+              attendance={filteredAttendanceData}
+              advances={advances}
+              onUpdateAdvances={updateAdvances}
+            />
+          </Suspense>
         );
       case 'Part-Time Staff':
         return (
-          <PartTimeStaff
-            attendance={filteredAttendance}
-            staff={staff}
-            onUpdateAttendance={updateAttendance}
-            onDeletePartTimeAttendance={deletePartTimeAttendance}
-            userLocation={user?.location}
-          />
+          <Suspense fallback={<ComponentLoader />}>
+            <PartTimeStaff
+              attendance={filteredAttendanceData}
+              staff={staff}
+              onUpdateAttendance={updateAttendance}
+              onDeletePartTimeAttendance={deletePartTimeAttendance}
+              userLocation={user?.location}
+            />
+          </Suspense>
         );
       case 'Old Staff Records':
         if (user?.role !== 'admin') return null;
         return (
-          <OldStaffRecords
-            oldStaffRecords={oldStaffRecords}
-            onRejoinStaff={rejoinStaff}
-            onPermanentDelete={permanentDeleteOldStaff}
-          />
+          <Suspense fallback={<ComponentLoader />}>
+            <OldStaffRecords
+              oldStaffRecords={oldStaffRecords}
+              onRejoinStaff={rejoinStaff}
+              onPermanentDelete={permanentDeleteOldStaff}
+            />
+          </Suspense>
         );
       default:
         return null;
