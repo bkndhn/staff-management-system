@@ -650,13 +650,14 @@ function App() {
 
     switch (activeTab) {
       case 'Dashboard':
-        if (user?.role !== 'admin') return null;
         return (
           <Dashboard
             staff={filteredStaffData}
             attendance={filteredAttendanceData}
             selectedDate={selectedDate}
             onDateChange={setSelectedDate}
+            userRole={user?.role || 'manager'}
+            userLocation={user?.location || ''}
           />
         );
       case 'Staff Management':

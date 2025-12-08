@@ -8,23 +8,50 @@ interface DashboardProps {
   attendance: Attendance[];
   selectedDate: string;
   onDateChange: (date: string) => void;
+  userRole?: 'admin' | 'manager';
+  userLocation?: string;
 }
 
-const Dashboard: React.FC<DashboardProps> = ({ staff, attendance, selectedDate, onDateChange }) => {
+const Dashboard: React.FC<DashboardProps> = ({
+  staff,
+  attendance,
+  selectedDate,
+  onDateChange,
+  userRole = 'manager',
+  userLocation = ''
+}) => {
   const todayAttendance = attendance.filter(record => record.date === selectedDate);
 
-  const activeStaff = staff.filter(member => member.isActive);
+  // For managers, filter staff and attendance to their location only
+  const filteredStaff = userRole === 'admin'
+    ? staff
+    : staff.filter(member => member.location === userLocation);
+
+  const activeStaff = filteredStaff.filter(member => member.isActive);
   const fullTimeStaff = activeStaff.filter(member => member.type === 'full-time');
   const partTimeStaff = activeStaff.filter(member => member.type === 'part-time');
 
+  // Filter attendance for manager's location
+  const filteredTodayAttendance = userRole === 'admin'
+    ? todayAttendance
+    : todayAttendance.filter(record => {
+      // For full-time staff, check if the staffId belongs to their location
+      if (!record.isPartTime) {
+        const staffMember = staff.find(s => s.id === record.staffId);
+        return staffMember?.location === userLocation;
+      }
+      // For part-time staff, check the location field
+      return record.location === userLocation;
+    });
+
   // Full-time attendance
-  const fullTimeAttendance = todayAttendance.filter(record => !record.isPartTime);
+  const fullTimeAttendance = filteredTodayAttendance.filter(record => !record.isPartTime);
   const presentToday = fullTimeAttendance.filter(record => record.status === 'Present').length;
   const halfDayToday = fullTimeAttendance.filter(record => record.status === 'Half Day').length;
   const absentToday = fullTimeAttendance.filter(record => record.status === 'Absent').length;
 
   // Part-time attendance
-  const partTimeAttendance = todayAttendance.filter(record => record.isPartTime && record.status === 'Present');
+  const partTimeAttendance = filteredTodayAttendance.filter(record => record.isPartTime && record.status === 'Present');
 
   // Calculate part-time breakdown for top summary card
   const partTimeBoth = partTimeAttendance.filter(record => record.shift === 'Both').length;
@@ -52,7 +79,12 @@ const Dashboard: React.FC<DashboardProps> = ({ staff, attendance, selectedDate, 
         'bg-indigo-100 text-indigo-800'
       ];
 
-      const formattedLocations = fetchedLocations.map((loc, index) => ({
+      // For managers, only show their location
+      const locationsToShow = userRole === 'admin'
+        ? fetchedLocations
+        : fetchedLocations.filter(loc => loc.name === userLocation);
+
+      const formattedLocations = locationsToShow.map((loc, index) => ({
         name: loc.name,
         color: colors[index % colors.length],
         stats: calculateLocationAttendance(activeStaff, todayAttendance, selectedDate, loc.name)
@@ -62,7 +94,7 @@ const Dashboard: React.FC<DashboardProps> = ({ staff, attendance, selectedDate, 
     };
 
     loadLocations();
-  }, [activeStaff, todayAttendance, selectedDate]);
+  }, [activeStaff, todayAttendance, selectedDate, userRole, userLocation]);
 
   // Helper function to format staff names with shift info
   const formatStaffName = (staffId: string, isPartTime: boolean = false, staffName?: string, shift?: string) => {
@@ -71,7 +103,7 @@ const Dashboard: React.FC<DashboardProps> = ({ staff, attendance, selectedDate, 
     }
 
     const staffMember = activeStaff.find(s => s.id === staffId);
-    const attendanceRecord = todayAttendance.find(a => a.staffId === staffId && !a.isPartTime);
+    const attendanceRecord = filteredTodayAttendance.find(a => a.staffId === staffId && !a.isPartTime);
 
     if (attendanceRecord?.status === 'Half Day' && attendanceRecord?.shift) {
       return `${staffMember?.name} (${attendanceRecord.shift})`;
@@ -117,81 +149,86 @@ const Dashboard: React.FC<DashboardProps> = ({ staff, attendance, selectedDate, 
         </div>
       </div>
 
-      {/* Stats Cards */}
-      <div className="dashboard-stats stats-grid grid grid-cols-1 md:grid-cols-5 gap-4 md:gap-6">
-        <div className="stats-card bg-white p-4 md:p-6 rounded-xl shadow-sm border border-gray-100 hover:shadow-md transition-shadow">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-gray-600 mb-1">Active Staff</p>
-              <p className="text-2xl md:text-3xl font-bold text-gray-800">{activeStaff.length}</p>
+      {/* Stats Cards - Admin Only */}
+      {userRole === 'admin' && (
+        <div className="dashboard-stats stats-grid grid grid-cols-1 md:grid-cols-5 gap-4 md:gap-6">
+          <div className="stats-card bg-white p-4 md:p-6 rounded-xl shadow-sm border border-gray-100 hover:shadow-md transition-shadow">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-gray-600 mb-1">Active Staff</p>
+                <p className="text-2xl md:text-3xl font-bold text-gray-800">{activeStaff.length}</p>
 
+              </div>
+              <div className="w-10 h-10 md:w-12 md:h-12 bg-blue-100 rounded-lg flex items-center justify-center">
+                <Users className="text-blue-600" size={20} />
+              </div>
             </div>
-            <div className="w-10 h-10 md:w-12 md:h-12 bg-blue-100 rounded-lg flex items-center justify-center">
-              <Users className="text-blue-600" size={20} />
+          </div>
+
+          <div className="stats-card bg-white p-4 md:p-6 rounded-xl shadow-sm border border-gray-100 hover:shadow-md transition-shadow">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-gray-600 mb-1">Present Today</p>
+                <p className="text-2xl md:text-3xl font-bold text-green-600">{presentToday + halfDayToday}</p>
+                <p className="text-xs text-gray-500">{presentToday} Full, {halfDayToday} Half</p>
+              </div>
+              <div className="w-10 h-10 md:w-12 md:h-12 bg-green-100 rounded-lg flex items-center justify-center">
+                <Clock className="text-green-600" size={20} />
+              </div>
+            </div>
+          </div>
+
+          <div className="stats-card bg-white p-4 md:p-6 rounded-xl shadow-sm border border-gray-100 hover:shadow-md transition-shadow">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-gray-600 mb-1">Half Day Today</p>
+                <p className="text-2xl md:text-3xl font-bold text-yellow-600">{halfDayToday}</p>
+                <p className="text-xs text-gray-500">Partial attendance</p>
+              </div>
+              <div className="w-10 h-10 md:w-12 md:h-12 bg-yellow-100 rounded-lg flex items-center justify-center">
+                <TrendingUp className="text-yellow-600" size={20} />
+              </div>
+            </div>
+          </div>
+
+          <div className="stats-card bg-white p-4 md:p-6 rounded-xl shadow-sm border border-gray-100 hover:shadow-md transition-shadow">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-gray-600 mb-1">Absent Today</p>
+                <p className="text-2xl md:text-3xl font-bold text-red-600">{absentToday}</p>
+                <p className="text-xs text-gray-500">Not present</p>
+              </div>
+              <div className="w-10 h-10 md:w-12 md:h-12 bg-red-100 rounded-lg flex items-center justify-center">
+                <Calendar className="text-red-600" size={20} />
+              </div>
+            </div>
+          </div>
+
+          <div className="stats-card bg-white p-4 md:p-6 rounded-xl shadow-sm border border-gray-100 hover:shadow-md transition-shadow">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-gray-600 mb-1">Part-Time Today</p>
+                <p className="text-2xl md:text-3xl font-bold text-purple-600">{partTimeTotal}</p>
+                <p className="text-xs text-gray-500">
+                  (Both: {partTimeBoth}, Morning: {partTimeMorning}, Evening: {partTimeEvening})
+                </p>
+              </div>
+              <div className="w-10 h-10 md:w-12 md:h-12 bg-purple-100 rounded-lg flex items-center justify-center">
+                <Clock className="text-purple-600" size={20} />
+              </div>
             </div>
           </div>
         </div>
-
-        <div className="stats-card bg-white p-4 md:p-6 rounded-xl shadow-sm border border-gray-100 hover:shadow-md transition-shadow">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-gray-600 mb-1">Present Today</p>
-              <p className="text-2xl md:text-3xl font-bold text-green-600">{presentToday + halfDayToday}</p>
-              <p className="text-xs text-gray-500">{presentToday} Full, {halfDayToday} Half</p>
-            </div>
-            <div className="w-10 h-10 md:w-12 md:h-12 bg-green-100 rounded-lg flex items-center justify-center">
-              <Clock className="text-green-600" size={20} />
-            </div>
-          </div>
-        </div>
-
-        <div className="stats-card bg-white p-4 md:p-6 rounded-xl shadow-sm border border-gray-100 hover:shadow-md transition-shadow">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-gray-600 mb-1">Half Day Today</p>
-              <p className="text-2xl md:text-3xl font-bold text-yellow-600">{halfDayToday}</p>
-              <p className="text-xs text-gray-500">Partial attendance</p>
-            </div>
-            <div className="w-10 h-10 md:w-12 md:h-12 bg-yellow-100 rounded-lg flex items-center justify-center">
-              <TrendingUp className="text-yellow-600" size={20} />
-            </div>
-          </div>
-        </div>
-
-        <div className="stats-card bg-white p-4 md:p-6 rounded-xl shadow-sm border border-gray-100 hover:shadow-md transition-shadow">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-gray-600 mb-1">Absent Today</p>
-              <p className="text-2xl md:text-3xl font-bold text-red-600">{absentToday}</p>
-              <p className="text-xs text-gray-500">Not present</p>
-            </div>
-            <div className="w-10 h-10 md:w-12 md:h-12 bg-red-100 rounded-lg flex items-center justify-center">
-              <Calendar className="text-red-600" size={20} />
-            </div>
-          </div>
-        </div>
-
-        <div className="stats-card bg-white p-4 md:p-6 rounded-xl shadow-sm border border-gray-100 hover:shadow-md transition-shadow">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-gray-600 mb-1">Part-Time Today</p>
-              <p className="text-2xl md:text-3xl font-bold text-purple-600">{partTimeTotal}</p>
-              <p className="text-xs text-gray-500">
-                (Both: {partTimeBoth}, Morning: {partTimeMorning}, Evening: {partTimeEvening})
-              </p>
-            </div>
-            <div className="w-10 h-10 md:w-12 md:h-12 bg-purple-100 rounded-lg flex items-center justify-center">
-              <Clock className="text-purple-600" size={20} />
-            </div>
-          </div>
-        </div>
-      </div>
+      )}
 
       {/* Location-based Attendance */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 md:p-6">
         <h2 className="text-lg md:text-xl font-bold text-gray-800 mb-6 flex items-center gap-2">
           <MapPin className="text-blue-600" size={20} />
-          Today's Attendance by Location (Including Part-Time & Shifts)
+          {userRole === 'admin'
+            ? "Today's Attendance by Location (Including Part-Time & Shifts)"
+            : `${userLocation} - Today's Attendance`
+          }
         </h2>
 
         <div className="space-y-6">
@@ -291,86 +328,88 @@ const Dashboard: React.FC<DashboardProps> = ({ staff, attendance, selectedDate, 
         </div>
       </div>
 
-      {/* Overall Organization Attendance */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 md:p-6 mt-6">
-        <h2 className="text-lg md:text-xl font-bold text-gray-800 mb-6 flex items-center gap-2">
-          <TrendingUp className="text-blue-600" size={20} />
-          Overall Organization Attendance
-        </h2>
+      {/* Overall Organization Attendance - Admin Only */}
+      {userRole === 'admin' && (
+        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 md:p-6 mt-6">
+          <h2 className="text-lg md:text-xl font-bold text-gray-800 mb-6 flex items-center gap-2">
+            <TrendingUp className="text-blue-600" size={20} />
+            Overall Organization Attendance
+          </h2>
 
-        {(() => {
-          // Calculate overall stats
-          const overallPartTimeBoth = partTimeAttendance.filter(record => record.shift === 'Both');
-          const overallPartTimeMorning = partTimeAttendance.filter(record => record.shift === 'Morning');
-          const overallPartTimeEvening = partTimeAttendance.filter(record => record.shift === 'Evening');
+          {(() => {
+            // Calculate overall stats
+            const overallPartTimeBoth = partTimeAttendance.filter(record => record.shift === 'Both');
+            const overallPartTimeMorning = partTimeAttendance.filter(record => record.shift === 'Morning');
+            const overallPartTimeEvening = partTimeAttendance.filter(record => record.shift === 'Evening');
 
-          const overallPartTimeNames = [
-            ...overallPartTimeBoth.map(record => `${record.staffName} (Both)`),
-            ...overallPartTimeMorning.map(record => `${record.staffName} (Morning)`),
-            ...overallPartTimeEvening.map(record => `${record.staffName} (Evening)`)
-          ];
+            const overallPartTimeNames = [
+              ...overallPartTimeBoth.map(record => `${record.staffName} (Both)`),
+              ...overallPartTimeMorning.map(record => `${record.staffName} (Morning)`),
+              ...overallPartTimeEvening.map(record => `${record.staffName} (Evening)`)
+            ];
 
-          const overallFullTimePresent = fullTimeAttendance.filter(record => record.status === 'Present')
-            .map(record => formatStaffName(record.staffId, false));
+            const overallFullTimePresent = fullTimeAttendance.filter(record => record.status === 'Present')
+              .map(record => formatStaffName(record.staffId, false));
 
-          const overallFullTimeHalfDay = fullTimeAttendance.filter(record => record.status === 'Half Day')
-            .map(record => formatStaffName(record.staffId, false));
+            const overallFullTimeHalfDay = fullTimeAttendance.filter(record => record.status === 'Half Day')
+              .map(record => formatStaffName(record.staffId, false));
 
-          const overallFullTimeAbsent = fullTimeAttendance.filter(record => record.status === 'Absent')
-            .map(record => formatStaffName(record.staffId, false));
+            const overallFullTimeAbsent = fullTimeAttendance.filter(record => record.status === 'Absent')
+              .map(record => formatStaffName(record.staffId, false));
 
-          return (
-            <div className="border-b border-gray-100 pb-6 last:border-b-0 last:pb-0">
-              <h3 className="text-base md:text-lg font-semibold text-blue-600 mb-4 text-center">
-                All Locations - Total Present: {overallFullTimePresent.length + overallFullTimeHalfDay.length}
-                {partTimeAttendance.length > 0 && (
-                  <span className="text-sm">
-                    {' + Part-Time: '}{partTimeAttendance.length}
-                    {' ('}
-                    Both: {overallPartTimeBoth.length}, Morning: {overallPartTimeMorning.length}, Evening: {overallPartTimeEvening.length}
-                    {')'}
-                  </span>
-                )}
-              </h3>
+            return (
+              <div className="border-b border-gray-100 pb-6 last:border-b-0 last:pb-0">
+                <h3 className="text-base md:text-lg font-semibold text-blue-600 mb-4 text-center">
+                  All Locations - Total Present: {overallFullTimePresent.length + overallFullTimeHalfDay.length}
+                  {partTimeAttendance.length > 0 && (
+                    <span className="text-sm">
+                      {' + Part-Time: '}{partTimeAttendance.length}
+                      {' ('}
+                      Both: {overallPartTimeBoth.length}, Morning: {overallPartTimeMorning.length}, Evening: {overallPartTimeEvening.length}
+                      {')'}
+                    </span>
+                  )}
+                </h3>
 
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                <div className="bg-green-50 p-3 md:p-4 rounded-lg">
-                  <p className="text-base md:text-lg font-bold text-green-600 mb-1">Present: {overallFullTimePresent.length}/{fullTimeStaff.length}</p>
-                  <p className="text-sm text-gray-600">
-                    {overallFullTimePresent.length > 0 ? overallFullTimePresent.join(', ') : 'None'}
-                  </p>
-                </div>
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                  <div className="bg-green-50 p-3 md:p-4 rounded-lg">
+                    <p className="text-base md:text-lg font-bold text-green-600 mb-1">Present: {overallFullTimePresent.length}/{fullTimeStaff.length}</p>
+                    <p className="text-sm text-gray-600">
+                      {overallFullTimePresent.length > 0 ? overallFullTimePresent.join(', ') : 'None'}
+                    </p>
+                  </div>
 
-                <div className="bg-yellow-50 p-3 md:p-4 rounded-lg">
-                  <p className="text-base md:text-lg font-bold text-yellow-600 mb-1">Half-day: {overallFullTimeHalfDay.length}</p>
-                  <p className="text-sm text-gray-600">
-                    {overallFullTimeHalfDay.length > 0 ? overallFullTimeHalfDay.join(', ') : 'None'}
-                  </p>
-                </div>
+                  <div className="bg-yellow-50 p-3 md:p-4 rounded-lg">
+                    <p className="text-base md:text-lg font-bold text-yellow-600 mb-1">Half-day: {overallFullTimeHalfDay.length}</p>
+                    <p className="text-sm text-gray-600">
+                      {overallFullTimeHalfDay.length > 0 ? overallFullTimeHalfDay.join(', ') : 'None'}
+                    </p>
+                  </div>
 
-                <div className="bg-red-50 p-3 md:p-4 rounded-lg">
-                  <p className="text-base md:text-lg font-bold text-red-600 mb-1">Absent: {overallFullTimeAbsent.length}</p>
-                  <p className="text-sm text-gray-600">
-                    {overallFullTimeAbsent.length > 0 ? overallFullTimeAbsent.join(', ') : 'None'}
-                  </p>
-                </div>
+                  <div className="bg-red-50 p-3 md:p-4 rounded-lg">
+                    <p className="text-base md:text-lg font-bold text-red-600 mb-1">Absent: {overallFullTimeAbsent.length}</p>
+                    <p className="text-sm text-gray-600">
+                      {overallFullTimeAbsent.length > 0 ? overallFullTimeAbsent.join(', ') : 'None'}
+                    </p>
+                  </div>
 
-                <div className="bg-purple-50 p-3 md:p-4 rounded-lg">
-                  <p className="text-base md:text-lg font-bold text-purple-600 mb-1">
-                    Part-Time: {partTimeAttendance.length} (Both: {overallPartTimeBoth.length}, Morning: {overallPartTimeMorning.length}, Evening: {overallPartTimeEvening.length})
-                  </p>
-                  <p className="text-sm text-gray-600">
-                    {overallPartTimeNames.length > 0
-                      ? overallPartTimeNames.join(', ')
-                      : 'None'
-                    }
-                  </p>
+                  <div className="bg-purple-50 p-3 md:p-4 rounded-lg">
+                    <p className="text-base md:text-lg font-bold text-purple-600 mb-1">
+                      Part-Time: {partTimeAttendance.length} (Both: {overallPartTimeBoth.length}, Morning: {overallPartTimeMorning.length}, Evening: {overallPartTimeEvening.length})
+                    </p>
+                    <p className="text-sm text-gray-600">
+                      {overallPartTimeNames.length > 0
+                        ? overallPartTimeNames.join(', ')
+                        : 'None'
+                      }
+                    </p>
+                  </div>
                 </div>
               </div>
-            </div>
-          );
-        })()}
-      </div>
+            );
+          })()}
+        </div>
+      )}
     </div>
   );
 };

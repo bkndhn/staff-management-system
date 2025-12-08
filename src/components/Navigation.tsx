@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { NavigationTab, User } from '../types';
 import {
   BarChart3,
@@ -7,7 +7,8 @@ import {
   DollarSign,
   Clock,
   Archive,
-  LogOut
+  LogOut,
+  AlertTriangle
 } from 'lucide-react';
 
 interface NavigationProps {
@@ -18,6 +19,21 @@ interface NavigationProps {
 }
 
 const Navigation: React.FC<NavigationProps> = ({ activeTab, setActiveTab, user, onLogout }) => {
+  const [showLogoutModal, setShowLogoutModal] = useState(false);
+
+  const handleLogoutClick = () => {
+    setShowLogoutModal(true);
+  };
+
+  const handleLogoutConfirm = () => {
+    setShowLogoutModal(false);
+    onLogout();
+  };
+
+  const handleLogoutCancel = () => {
+    setShowLogoutModal(false);
+  };
+
   const getAvailableTabs = () => {
     if (user.role === 'admin') {
       return [
@@ -31,6 +47,7 @@ const Navigation: React.FC<NavigationProps> = ({ activeTab, setActiveTab, user, 
     } else {
       // Manager role - limited access
       return [
+        { id: 'Dashboard' as NavigationTab, label: 'Dashboard', icon: BarChart3 },
         { id: 'Attendance' as NavigationTab, label: 'Attendance', icon: Calendar },
         { id: 'Part-Time Staff' as NavigationTab, label: 'Part-Time', icon: Clock },
       ];
@@ -74,7 +91,7 @@ const Navigation: React.FC<NavigationProps> = ({ activeTab, setActiveTab, user, 
               <div className="text-xs text-gray-500">{user.email}</div>
             </div>
             <button
-              onClick={onLogout}
+              onClick={handleLogoutClick}
               className="flex items-center gap-2 px-3 py-2 text-gray-600 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
             >
               <LogOut size={16} />
@@ -104,7 +121,7 @@ const Navigation: React.FC<NavigationProps> = ({ activeTab, setActiveTab, user, 
               </div>
             </div>
             <button
-              onClick={onLogout}
+              onClick={handleLogoutClick}
               className="p-2.5 text-gray-500 hover:text-red-500 rounded-xl transition-all duration-200 active:scale-90"
               style={{
                 background: 'rgba(239, 68, 68, 0.08)'
@@ -204,6 +221,35 @@ const Navigation: React.FC<NavigationProps> = ({ activeTab, setActiveTab, user, 
           }
         }
       `}</style>
+
+      {/* Logout Confirmation Modal */}
+      {showLogoutModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[100] p-4">
+          <div className="bg-white rounded-xl p-6 max-w-sm w-full shadow-2xl">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center">
+                <AlertTriangle className="text-red-600" size={20} />
+              </div>
+              <h3 className="text-lg font-bold text-gray-800">Confirm Logout</h3>
+            </div>
+            <p className="text-gray-600 mb-6">Are you sure you want to logout from the Staff Management System?</p>
+            <div className="flex gap-3">
+              <button
+                onClick={handleLogoutCancel}
+                className="flex-1 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors font-medium"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleLogoutConfirm}
+                className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-medium"
+              >
+                Logout
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 };
