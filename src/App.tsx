@@ -12,6 +12,7 @@ import { oldStaffService } from './services/oldStaffService';
 import { salaryHikeService } from './services/salaryHikeService';
 import { isSunday } from './utils/salaryCalculations';
 import { isSupabaseConfigured } from './lib/supabase';
+import { cacheService, cachedFetch, CACHE_KEYS, CACHE_TTL } from './lib/cacheService';
 
 // Lazy load heavy components for faster initial load
 const StaffManagement = React.lazy(() => import('./components/StaffManagement'));
@@ -50,22 +51,25 @@ function App() {
 
   // Load all data from Supabase on app start
   useEffect(() => {
-    // Check for existing login session
+    // Check for existing login session with security validation
     const savedLogin = localStorage.getItem('staffManagementLogin');
     if (savedLogin) {
       try {
         const loginData = JSON.parse(savedLogin);
-        const now = Date.now();
 
-        // Check if session is still valid (30 days)
-        if (now - loginData.timestamp < loginData.expiresIn) {
+        // Use secure session validation
+        const { validateSession } = require('./lib/security');
+
+        if (validateSession(loginData)) {
           setUser(loginData.user);
         } else {
-          // Session expired, remove it
+          // Session invalid or expired, remove it
+          console.warn('Session validation failed - logging out');
           localStorage.removeItem('staffManagementLogin');
         }
       } catch (error) {
         // Invalid session data, remove it
+        console.error('Session parse error:', error);
         localStorage.removeItem('staffManagementLogin');
       }
     }
@@ -88,15 +92,18 @@ function App() {
     }
   }, [user]);
 
+  // Optimized data loading with caching to reduce Supabase API calls
   const loadAllData = async () => {
     try {
       setLoading(true);
+
+      // Use cached fetch to reduce Supabase API calls
       const [staffData, attendanceData, advanceData, oldStaffData, salaryHikeData] = await Promise.all([
-        staffService.getAll(),
-        attendanceService.getAll(),
-        advanceService.getAll(),
-        oldStaffService.getAll(),
-        salaryHikeService.getAll()
+        cachedFetch(CACHE_KEYS.STAFF, () => staffService.getAll(), CACHE_TTL.MEDIUM),
+        cachedFetch(CACHE_KEYS.ATTENDANCE, () => attendanceService.getAll(), CACHE_TTL.SHORT),
+        cachedFetch(CACHE_KEYS.ADVANCES, () => advanceService.getAll(), CACHE_TTL.MEDIUM),
+        cachedFetch(CACHE_KEYS.OLD_STAFF, () => oldStaffService.getAll(), CACHE_TTL.LONG),
+        cachedFetch(CACHE_KEYS.SALARY_HIKES, () => salaryHikeService.getAll(), CACHE_TTL.LONG)
       ]);
 
       // Merge salary supplements
@@ -105,11 +112,19 @@ function App() {
       setAdvances(advanceData);
       setOldStaffRecords(oldStaffData);
       setSalaryHikes(salaryHikeData);
+
+      console.log('📊 Cache stats:', cacheService.getStats());
     } catch (error) {
       console.error('Error loading data:', error);
     } finally {
       setLoading(false);
     }
+  };
+
+  // Force refresh data (bypasses cache)
+  const forceRefreshData = async () => {
+    cacheService.clearAll();
+    await loadAllData();
   };
 
   const handleLogin = (userData: User) => {
@@ -729,38 +744,38 @@ function App() {
   // Show configuration error if Supabase is not properly set up
   if (!isSupabaseConfigured) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-red-50 to-orange-50 flex items-center justify-center p-4">
-        <div className="max-w-2xl w-full bg-white rounded-lg shadow-xl p-8">
+      <div className="min-h-screen flex items-center justify-center p-4">
+        <div className="max-w-2xl w-full glass-card-static p-8">
           <div className="text-center">
-            <div className="mx-auto flex items-center justify-center h-16 w-16 rounded-full bg-red-100 mb-4">
-              <svg className="h-8 w-8 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <div className="mx-auto flex items-center justify-center h-16 w-16 rounded-full bg-red-500/20 mb-4">
+              <svg className="h-8 w-8 text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
               </svg>
             </div>
-            <h1 className="text-2xl font-bold text-gray-900 mb-2">Configuration Error</h1>
-            <p className="text-gray-600 mb-6">
+            <h1 className="text-2xl font-bold text-white mb-2">Configuration Error</h1>
+            <p className="text-white/60 mb-6">
               The application is missing required environment variables.
             </p>
 
-            <div className="bg-gray-50 rounded-lg p-4 text-left mb-6">
-              <h2 className="font-semibold text-gray-900 mb-2">Required Environment Variables:</h2>
-              <ul className="list-disc list-inside space-y-1 text-sm text-gray-700">
-                <li><code className="bg-gray-200 px-2 py-1 rounded">VITE_SUPABASE_URL</code></li>
-                <li><code className="bg-gray-200 px-2 py-1 rounded">VITE_SUPABASE_ANON_KEY</code></li>
+            <div className="glass-card-static rounded-lg p-4 text-left mb-6">
+              <h2 className="font-semibold text-white mb-2">Required Environment Variables:</h2>
+              <ul className="list-disc list-inside space-y-1 text-sm text-white/70">
+                <li><code className="bg-white/10 px-2 py-1 rounded">VITE_SUPABASE_URL</code></li>
+                <li><code className="bg-white/10 px-2 py-1 rounded">VITE_SUPABASE_ANON_KEY</code></li>
               </ul>
             </div>
 
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 text-left">
-              <h3 className="font-semibold text-blue-900 mb-2">Setup Instructions:</h3>
-              <ol className="list-decimal list-inside space-y-2 text-sm text-blue-800">
-                <li>Copy <code className="bg-blue-100 px-2 py-1 rounded">.env.example</code> to <code className="bg-blue-100 px-2 py-1 rounded">.env</code></li>
-                <li>Add your Supabase credentials to the <code className="bg-blue-100 px-2 py-1 rounded">.env</code> file</li>
+            <div className="glass-card-static rounded-lg p-4 text-left border-l-4 border-blue-400">
+              <h3 className="font-semibold text-blue-400 mb-2">Setup Instructions:</h3>
+              <ol className="list-decimal list-inside space-y-2 text-sm text-white/70">
+                <li>Copy <code className="bg-white/10 px-2 py-1 rounded">.env.example</code> to <code className="bg-white/10 px-2 py-1 rounded">.env</code></li>
+                <li>Add your Supabase credentials to the <code className="bg-white/10 px-2 py-1 rounded">.env</code> file</li>
                 <li>For deployments (Vercel/Netlify), add these variables in your platform's environment settings</li>
                 <li>Restart the development server or redeploy</li>
               </ol>
             </div>
 
-            <p className="text-xs text-gray-500 mt-6">
+            <p className="text-xs text-white/40 mt-6">
               Check the browser console for more details.
             </p>
           </div>
@@ -774,7 +789,7 @@ function App() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen">
       <Navigation
         activeTab={activeTab}
         setActiveTab={setActiveTab}

@@ -1616,15 +1616,12 @@ const PartTimeStaff: React.FC<PartTimeStaffProps> = ({
                 {/* Search Bar */}
                 <div className="mb-4">
                     <div className="relative w-full md:w-96">
-                        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                            <Search className="text-gray-400" size={18} />
-                        </div>
                         <input
                             type="text"
                             placeholder="Search staff by name..."
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
-                            className="w-full pl-10 pr-10 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent text-sm"
+                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent text-sm"
                         />
                         {searchQuery && (
                             <button
@@ -1996,7 +1993,6 @@ const PartTimeStaff: React.FC<PartTimeStaffProps> = ({
                             onClick={loadPastReport}
                             className="flex-1 bg-purple-600 text-white px-4 py-2 rounded-md hover:bg-purple-700 transition-colors flex items-center justify-center gap-2"
                         >
-                            <Search size={18} />
                             Generate
                         </button>
                         <div className="flex rounded-md shadow-sm" role="group">

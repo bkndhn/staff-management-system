@@ -301,28 +301,31 @@ const StaffManagement: React.FC<StaffManagementProps> = ({
     <div className="p-4 md:p-6 space-y-6" >
       {/* Header */}
       < div className="flex flex-col md:flex-row md:items-center justify-between gap-4" >
-        <h1 className="text-2xl md:text-3xl font-bold text-gray-800 flex items-center gap-2">
-          <Users className="text-blue-600" size={32} />
-          Staff Management
-        </h1>
+        <div className="flex items-center gap-3">
+          <div className="stat-icon stat-icon-primary">
+            <Users size={24} />
+          </div>
+          <div>
+            <h1 className="text-2xl md:text-3xl font-bold text-white">Staff Management</h1>
+            <p className="text-white/50 text-sm">Manage your team members</p>
+          </div>
+        </div>
         <div className="flex flex-col sm:flex-row gap-3 w-full md:w-auto">
           {/* Search Bar */}
           <div className="relative flex-1 sm:min-w-[200px] md:min-w-[300px]">
-            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-              <Search className="text-gray-400" size={20} />
-            </div>
             <input
               type="text"
               placeholder="Search by name or location..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="input-premium"
             />
           </div>
           <div className="flex gap-2">
             <button
               onClick={() => setShowLocationManager(true)}
-              className="flex items-center gap-2 px-3 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors text-sm"
+              className="btn-premium flex items-center gap-2 px-3 py-2 text-sm"
+              style={{ background: 'linear-gradient(135deg, #a855f7 0%, #6366f1 100%)' }}
               title="Manage Locations"
             >
               <MapPin size={16} />
@@ -330,7 +333,7 @@ const StaffManagement: React.FC<StaffManagementProps> = ({
             </button>
             <button
               onClick={() => setShowCategoryManager(true)}
-              className="flex items-center gap-2 px-3 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm"
+              className="btn-premium btn-premium-success flex items-center gap-2 px-3 py-2 text-sm"
               title="Manage Salary Categories"
             >
               <DollarSign size={16} />
@@ -342,7 +345,7 @@ const StaffManagement: React.FC<StaffManagementProps> = ({
                 setEditingStaff(null);
                 setShowAddForm(!showAddForm);
               }}
-              className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+              className="btn-premium flex items-center gap-2 px-4 py-2"
             >
               <Plus size={20} />
               <span className="hidden sm:inline">Add Staff</span>
@@ -373,19 +376,19 @@ const StaffManagement: React.FC<StaffManagementProps> = ({
           if (staffDueForHike.length === 0) return null;
 
           return (
-            <div onClick={() => setShowHikeDueModal(true)} className="bg-amber-50 border border-amber-200 rounded-lg p-4 flex items-center justify-between cursor-pointer hover:bg-amber-100 transition-colors">
+            <div onClick={() => setShowHikeDueModal(true)} className="glass-card-static p-4 flex items-center justify-between cursor-pointer hover:bg-white/10 transition-colors border-l-4 border-amber-500">
               <div className="flex items-center gap-3">
-                <div className="p-2 bg-amber-100 rounded-full">
-                  <TrendingUp className="text-amber-600" size={20} />
+                <div className="p-2 bg-amber-500/20 rounded-full">
+                  <TrendingUp className="text-amber-400" size={20} />
                 </div>
                 <div>
-                  <h3 className="font-semibold text-amber-900">Salary Hike Due</h3>
-                  <p className="text-sm text-amber-700">
+                  <h3 className="font-semibold text-amber-400">Salary Hike Due</h3>
+                  <p className="text-sm text-white/60">
                     {staffDueForHike.length} staff member{staffDueForHike.length !== 1 ? 's are' : ' is'} eligible for a salary hike
                   </p>
                 </div>
               </div>
-              <span className="text-amber-600 text-sm font-medium">Click to view ?</span>
+              <span className="text-amber-400 text-sm font-medium">Click to view →</span>
             </div>
           );
         })()
@@ -402,9 +405,9 @@ const StaffManagement: React.FC<StaffManagementProps> = ({
       }
 
       {/* Location Filter Bar */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4">
+      <div className="glass-card-static p-4">
         <div className="flex items-center gap-4 flex-wrap">
-          <div className="flex items-center gap-2 text-gray-600">
+          <div className="flex items-center gap-2 text-white/60">
             <Filter size={18} />
             <span className="font-medium">Filter by Location:</span>
           </div>
@@ -412,8 +415,8 @@ const StaffManagement: React.FC<StaffManagementProps> = ({
             <button
               onClick={() => setLocationFilter('All')}
               className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${locationFilter === 'All'
-                ? 'bg-blue-600 text-white'
-                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                ? 'bg-gradient-to-r from-indigo-500 to-purple-500 text-white'
+                : 'bg-white/10 text-white/70 hover:bg-white/20'
                 }`}
             >
               All ({staff.filter(s => s.isActive).length})
@@ -425,8 +428,8 @@ const StaffManagement: React.FC<StaffManagementProps> = ({
                   key={loc.id}
                   onClick={() => setLocationFilter(loc.name)}
                   className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${locationFilter === loc.name
-                    ? 'bg-blue-600 text-white'
-                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                    ? 'bg-gradient-to-r from-indigo-500 to-purple-500 text-white'
+                    : 'bg-white/10 text-white/70 hover:bg-white/20'
                     }`}
                 >
                   {loc.name} ({count})
@@ -440,27 +443,27 @@ const StaffManagement: React.FC<StaffManagementProps> = ({
       {/* Add/Edit Staff Form */}
       {
         showAddForm && (
-          <div ref={formRef} className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-            <h2 className="text-lg font-semibold text-gray-800 mb-4">
+          <div ref={formRef} className="glass-card-static p-6">
+            <h2 className="text-lg font-semibold text-white mb-4">
               {editingStaff ? 'Edit Staff Member' : 'Add New Staff Member'}
             </h2>
             <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Name</label>
+                <label className="block text-sm font-medium text-white/70 mb-1">Name</label>
                 <input
                   type="text"
                   value={formData.name}
                   onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="input-premium"
                   required
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Location</label>
+                <label className="block text-sm font-medium text-white/70 mb-1">Location</label>
                 <select
                   value={formData.location}
                   onChange={(e) => setFormData({ ...formData, location: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="input-premium"
                 >
                   {locations.map(loc => (
                     <option key={loc.id} value={loc.name}>{loc.name}</option>
@@ -468,60 +471,60 @@ const StaffManagement: React.FC<StaffManagementProps> = ({
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Joined Date</label>
+                <label className="block text-sm font-medium text-white/70 mb-1">Joined Date</label>
                 <input
                   type="date"
                   value={formData.joinedDate}
                   onChange={(e) => setFormData({ ...formData, joinedDate: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="input-premium"
                   required
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Basic Salary</label>
+                <label className="block text-sm font-medium text-white/70 mb-1">Basic Salary</label>
                 <input
                   type="number"
                   value={formData.basicSalary}
                   onChange={(e) => setFormData({ ...formData, basicSalary: Number(e.target.value) })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="input-premium"
                   required
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Incentive</label>
+                <label className="block text-sm font-medium text-white/70 mb-1">Incentive</label>
                 <input
                   type="number"
                   value={formData.incentive}
                   onChange={(e) => setFormData({ ...formData, incentive: Number(e.target.value) })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="input-premium"
                   required
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">HRA</label>
+                <label className="block text-sm font-medium text-white/70 mb-1">HRA</label>
                 <input
                   type="number"
                   value={formData.hra}
                   onChange={(e) => setFormData({ ...formData, hra: Number(e.target.value) })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="input-premium"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Meal Allowance</label>
+                <label className="block text-sm font-medium text-white/70 mb-1">Meal Allowance</label>
                 <input
                   type="number"
                   value={formData.mealAllowance}
                   onChange={(e) => setFormData({ ...formData, mealAllowance: Number(e.target.value) })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="input-premium"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Salary Calculation Days</label>
+                <label className="block text-sm font-medium text-white/70 mb-1">Salary Calculation Days</label>
                 <input
                   type="number"
                   value={formData.salaryCalculationDays}
                   onChange={(e) => setFormData({ ...formData, salaryCalculationDays: Number(e.target.value) })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="input-premium"
                   min="1"
                   max="31"
                 />
@@ -533,15 +536,15 @@ const StaffManagement: React.FC<StaffManagementProps> = ({
                     type="checkbox"
                     checked={formData.sundayPenalty}
                     onChange={(e) => setFormData({ ...formData, sundayPenalty: e.target.checked })}
-                    className="w-5 h-5 text-blue-600 rounded focus:ring-blue-500 border-gray-300"
+                    className="w-5 h-5 text-indigo-600 rounded focus:ring-indigo-500 border-white/30 bg-white/10"
                   />
-                  <span className="text-sm font-medium text-gray-700">Apply Sunday Penalty</span>
+                  <span className="text-sm font-medium text-white/70">Apply Sunday Penalty</span>
                 </label>
               </div>
 
               {salaryCategories.filter(c => !['basic', 'incentive', 'hra', 'meal_allowance'].includes(c.id)).map(category => (
                 <div key={category.id}>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">{category.name}</label>
+                  <label className="block text-sm font-medium text-white/70 mb-1">{category.name}</label>
                   <input
                     type="number"
                     value={formData.salarySupplements[category.id] || 0}
@@ -552,14 +555,14 @@ const StaffManagement: React.FC<StaffManagementProps> = ({
                         [category.id]: Number(e.target.value)
                       }
                     })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="input-premium"
                   />
                 </div>
               ))}
               <div className="md:col-span-2 lg:col-span-3 flex gap-3">
                 <button
                   type="submit"
-                  className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                  className="btn-premium px-6 py-2"
                 >
                   {editingStaff ? 'Update Staff' : 'Add Staff'}
                 </button>
@@ -570,7 +573,7 @@ const StaffManagement: React.FC<StaffManagementProps> = ({
                     setEditingStaff(null);
                     setShowAddForm(false);
                   }}
-                  className="px-6 py-2 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400 transition-colors"
+                  className="btn-ghost px-6 py-2"
                 >
                   Cancel
                 </button>
@@ -583,22 +586,22 @@ const StaffManagement: React.FC<StaffManagementProps> = ({
       {/* Delete Confirmation Modal */}
       {
         showDeleteModal && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-            <div className="bg-white rounded-xl p-6 max-w-md w-full">
-              <h3 className="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2">
-                <Archive className="text-red-600" size={20} />
+          <div className="modal-overlay">
+            <div className="modal-content">
+              <h3 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
+                <Archive className="text-red-400" size={20} />
                 Archive Staff Member
               </h3>
-              <p className="text-gray-600 mb-4">
-                Are you sure you want to archive <strong>{showDeleteModal.name}</strong>?
+              <p className="text-white/60 mb-4">
+                Are you sure you want to archive <strong className="text-white">{showDeleteModal.name}</strong>?
               </p>
               <div className="mb-4">
-                <label className="block text-sm font-medium text-gray-700 mb-2">Reason *</label>
+                <label className="block text-sm font-medium text-white/70 mb-2">Reason *</label>
                 <textarea
                   value={deleteReason}
                   onChange={(e) => setDeleteReason(e.target.value)}
                   placeholder="Enter reason for archiving..."
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                  className="input-premium w-full"
                   rows={3}
                 />
               </div>
@@ -606,13 +609,13 @@ const StaffManagement: React.FC<StaffManagementProps> = ({
                 <button
                   onClick={confirmDelete}
                   disabled={!deleteReason.trim()}
-                  className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:bg-gray-300 disabled:cursor-not-allowed"
+                  className="flex-1 btn-premium btn-premium-danger disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   Archive
                 </button>
                 <button
                   onClick={() => setShowDeleteModal(null)}
-                  className="flex-1 px-4 py-2 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400"
+                  className="flex-1 btn-ghost"
                 >
                   Cancel
                 </button>
@@ -625,14 +628,14 @@ const StaffManagement: React.FC<StaffManagementProps> = ({
       {/* Salary History Modal */}
       {
         showSalaryHistory && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-            <div className="bg-white rounded-xl p-6 max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+          <div className="modal-overlay">
+            <div className="modal-content max-w-4xl max-h-[90vh] overflow-y-auto">
               <div className="flex items-center justify-between mb-6">
-                <h3 className="text-xl font-bold text-gray-800 flex items-center gap-2">
-                  <TrendingUp className="text-green-600" size={24} />
+                <h3 className="text-xl font-bold text-white flex items-center gap-2">
+                  <TrendingUp className="text-emerald-400" size={24} />
                   Salary Hike History
                 </h3>
-                <button onClick={() => setShowSalaryHistory(null)} className="text-gray-400 hover:text-gray-600">
+                <button onClick={() => setShowSalaryHistory(null)} className="text-white/50 hover:text-white">
                   ✕
                 </button>
               </div>
@@ -645,7 +648,7 @@ const StaffManagement: React.FC<StaffManagementProps> = ({
               <div className="mt-6 flex justify-end">
                 <button
                   onClick={() => setShowSalaryHistory(null)}
-                  className="px-4 py-2 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400"
+                  className="btn-ghost px-4 py-2"
                 >
                   Close
                 </button>
@@ -656,41 +659,41 @@ const StaffManagement: React.FC<StaffManagementProps> = ({
       }
 
       {/* Staff Table */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-        <div className="p-4 border-b border-gray-200 flex items-center justify-between">
-          <h2 className="text-lg font-semibold text-gray-800">
+      <div className="table-container">
+        <div className="p-4 border-b border-white/10 flex items-center justify-between">
+          <h2 className="text-lg font-semibold text-white">
             Active Staff ({activeStaff.length})
-            {locationFilter !== 'All' && <span className="text-blue-600 ml-2">- {locationFilter}</span>}
+            {locationFilter !== 'All' && <span className="text-indigo-400 ml-2">- {locationFilter}</span>}
           </h2>
           {onUpdateStaffOrder && (
-            <span className="text-xs text-gray-500 flex items-center gap-1">
+            <span className="text-xs text-white/50 flex items-center gap-1">
               <GripVertical size={14} />
               Drag rows to reorder
             </span>
           )}
         </div>
         <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead className="bg-gray-50">
+          <table className="table-premium">
+            <thead>
               <tr>
-                <th className="px-2 py-4 w-10"></th>
-                <th className="px-3 py-4 text-left text-xs font-medium text-gray-500 uppercase">S.No</th>
-                <th className="px-3 py-4 text-left text-xs font-medium text-gray-500 uppercase sticky left-0 bg-gray-50">Name</th>
-                <th className="px-3 py-4 text-left text-xs font-medium text-gray-500 uppercase">Location</th>
-                <th className="px-3 py-4 text-left text-xs font-medium text-gray-500 uppercase">Experience</th>
-                <th className="px-3 py-4 text-left text-xs font-medium text-gray-500 uppercase">{salaryCategories.find(c => c.id === 'basic')?.name || 'Basic'}</th>
-                <th className="px-3 py-4 text-left text-xs font-medium text-gray-500 uppercase">{salaryCategories.find(c => c.id === 'incentive')?.name || 'Incentive'}</th>
-                <th className="px-3 py-4 text-left text-xs font-medium text-gray-500 uppercase">{salaryCategories.find(c => c.id === 'hra')?.name || 'HRA'}</th>
-                <th className="px-3 py-4 text-left text-xs font-medium text-gray-500 uppercase">{salaryCategories.find(c => c.id === 'meal_allowance')?.name || 'Meal Allowance'}</th>
+                <th className="w-10"></th>
+                <th>S.No</th>
+                <th className="sticky left-0">Name</th>
+                <th>Location</th>
+                <th>Experience</th>
+                <th>{salaryCategories.find(c => c.id === 'basic')?.name || 'Basic'}</th>
+                <th>{salaryCategories.find(c => c.id === 'incentive')?.name || 'Incentive'}</th>
+                <th>{salaryCategories.find(c => c.id === 'hra')?.name || 'HRA'}</th>
+                <th>{salaryCategories.find(c => c.id === 'meal_allowance')?.name || 'Meal Allowance'}</th>
                 {salaryCategories.filter(c => !['basic', 'incentive', 'hra', 'meal_allowance'].includes(c.id)).map(category => (
-                  <th key={category.id} className="px-3 py-4 text-left text-xs font-medium text-gray-500 uppercase">{category.name}</th>
+                  <th key={category.id}>{category.name}</th>
                 ))}
-                <th className="px-3 py-4 text-left text-xs font-medium text-gray-500 uppercase">Total</th>
-                <th className="px-3 py-4 text-left text-xs font-medium text-gray-500 uppercase">Salary History</th>
-                <th className="px-3 py-4 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
+                <th>Total</th>
+                <th>Salary History</th>
+                <th>Actions</th>
               </tr>
             </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
+            <tbody>
               {activeStaff.map((member, index) => {
                 const memberHikes = getStaffSalaryHikes(member.id);
                 const hasHikes = memberHikes.length > 0;
