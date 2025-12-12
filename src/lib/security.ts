@@ -11,7 +11,7 @@ const SECURITY_CONFIG = {
     MAX_LOGIN_ATTEMPTS: 5,
     LOCKOUT_DURATION: 15 * 60 * 1000, // 15 minutes
     ATTEMPT_WINDOW: 5 * 60 * 1000, // 5 minutes
-    SESSION_DURATION: 8 * 60 * 60 * 1000, // 8 hours (reduced from 30 days for security)
+    SESSION_DURATION: 30 * 24 * 60 * 60 * 1000, // 30 days (as requested by user)
     MIN_PASSWORD_LENGTH: 8
 };
 

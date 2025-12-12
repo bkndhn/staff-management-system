@@ -1,6 +1,6 @@
-﻿import React from 'react';
+﻿import React, { useState, useEffect } from 'react';
 import { Staff, Attendance } from '../types';
-import { Users, Clock, Calendar, MapPin, TrendingUp } from 'lucide-react';
+import { Users, Clock, Calendar, MapPin, TrendingUp, Sun, Moon } from 'lucide-react';
 import { calculateLocationAttendance } from '../utils/salaryCalculations';
 
 interface DashboardProps {
@@ -20,6 +20,35 @@ const Dashboard: React.FC<DashboardProps> = ({
   userRole = 'manager',
   userLocation = ''
 }) => {
+  // Theme state
+  const [isDarkTheme, setIsDarkTheme] = useState(() => {
+    const savedTheme = localStorage.getItem('theme');
+    return savedTheme !== 'light'; // Default to dark theme
+  });
+
+  // Apply theme on change
+  useEffect(() => {
+    if (isDarkTheme) {
+      document.body.classList.remove('light-theme');
+      localStorage.setItem('theme', 'dark');
+    } else {
+      document.body.classList.add('light-theme');
+      localStorage.setItem('theme', 'light');
+    }
+  }, [isDarkTheme]);
+
+  // Apply saved theme on mount
+  useEffect(() => {
+    const savedTheme = localStorage.getItem('theme');
+    if (savedTheme === 'light') {
+      document.body.classList.add('light-theme');
+      setIsDarkTheme(false);
+    }
+  }, []);
+
+  const toggleTheme = () => {
+    setIsDarkTheme(!isDarkTheme);
+  };
   const todayAttendance = attendance.filter(record => record.date === selectedDate);
 
   // For managers, filter staff and attendance to their location only
@@ -128,6 +157,15 @@ const Dashboard: React.FC<DashboardProps> = ({
           </div>
         </div>
         <div className="flex flex-col md:flex-row items-start md:items-end gap-4">
+          {/* Theme Toggle */}
+          <button
+            onClick={toggleTheme}
+            className="flex items-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r from-indigo-500 to-purple-500 hover:from-indigo-600 hover:to-purple-600 text-white font-medium transition-all duration-300 shadow-lg hover:shadow-xl"
+            title={isDarkTheme ? 'Switch to Light Theme' : 'Switch to Dark Theme'}
+          >
+            {isDarkTheme ? <Sun size={18} /> : <Moon size={18} />}
+            <span className="text-sm">{isDarkTheme ? 'Light' : 'Dark'}</span>
+          </button>
           <div>
             <label className="block text-sm text-white/50 mb-2">Select Date</label>
             <input
@@ -138,91 +176,90 @@ const Dashboard: React.FC<DashboardProps> = ({
               className="input-premium"
             />
           </div>
-          <div className="text-left md:text-right glass-card-static px-4 py-3">
-            <p className="text-xs text-white/50">
-              {selectedDate === new Date().toISOString().split('T')[0] ? 'Today' : 'Selected Date'}
-            </p>
-            <p className="text-sm font-semibold text-white">
-              {new Date(selectedDate + 'T00:00:00').toLocaleDateString('en-US', {
-                weekday: 'long',
-                year: 'numeric',
-                month: 'long',
-                day: 'numeric'
-              })}
-            </p>
+          <div className="text-left md:text-right px-3 py-2">
+            <span className="text-sm font-medium text-white/70">
+              {new Date(selectedDate + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'long' })}
+            </span>
           </div>
         </div>
       </div>
 
       {/* Stats Cards - Admin Only */}
       {userRole === 'admin' && (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
-          {/* Active Staff */}
-          <div className="stat-card card-animate">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-white/60 mb-1">Active Staff</p>
-                <p className="text-3xl font-bold text-white">{activeStaff.length}</p>
+        <div className="space-y-4">
+          {/* Main Stats Row */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            {/* Active Staff */}
+            <div className="stat-card card-animate">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-white/60 mb-1">Active Staff</p>
+                  <p className="text-3xl font-bold text-white">{activeStaff.length}</p>
+                </div>
+                <div className="stat-icon stat-icon-primary">
+                  <Users size={22} />
+                </div>
               </div>
-              <div className="stat-icon stat-icon-primary">
-                <Users size={22} />
+            </div>
+
+            {/* Present Today */}
+            <div className="stat-card stat-card-success card-animate">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-white/60 mb-1">Present Today</p>
+                  <p className="text-3xl font-bold text-emerald-400">{presentToday + halfDayToday}</p>
+                </div>
+                <div className="stat-icon stat-icon-success">
+                  <Clock size={22} />
+                </div>
+              </div>
+            </div>
+
+            {/* Half Day */}
+            <div className="stat-card stat-card-warning card-animate">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-white/60 mb-1">Half Day Today</p>
+                  <p className="text-3xl font-bold text-amber-400">{halfDayToday}</p>
+                  <p className="text-xs text-white/40">Partial attendance</p>
+                </div>
+                <div className="stat-icon stat-icon-warning">
+                  <TrendingUp size={22} />
+                </div>
+              </div>
+            </div>
+
+            {/* Absent */}
+            <div className="stat-card stat-card-danger card-animate">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-white/60 mb-1">Absent Today</p>
+                  <p className="text-3xl font-bold text-red-400">{absentToday}</p>
+                  <p className="text-xs text-white/40">Not present</p>
+                </div>
+                <div className="stat-icon stat-icon-danger">
+                  <Calendar size={22} />
+                </div>
               </div>
             </div>
           </div>
 
-          {/* Present Today */}
-          <div className="stat-card stat-card-success card-animate">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-white/60 mb-1">Present Today</p>
-                <p className="text-3xl font-bold text-emerald-400">{presentToday + halfDayToday}</p>
-              </div>
-              <div className="stat-icon stat-icon-success">
-                <Clock size={22} />
-              </div>
-            </div>
-          </div>
-
-          {/* Half Day */}
-          <div className="stat-card stat-card-warning card-animate">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-white/60 mb-1">Half Day Today</p>
-                <p className="text-3xl font-bold text-amber-400">{halfDayToday}</p>
-                <p className="text-xs text-white/40">Partial attendance</p>
-              </div>
-              <div className="stat-icon stat-icon-warning">
-                <TrendingUp size={22} />
-              </div>
-            </div>
-          </div>
-
-          {/* Absent */}
-          <div className="stat-card stat-card-danger card-animate">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-white/60 mb-1">Absent Today</p>
-                <p className="text-3xl font-bold text-red-400">{absentToday}</p>
-                <p className="text-xs text-white/40">Not present</p>
-              </div>
-              <div className="stat-icon stat-icon-danger">
-                <Calendar size={22} />
-              </div>
-            </div>
-          </div>
-
-          {/* Part-Time */}
-          <div className="stat-card stat-card-purple card-animate">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-white/60 mb-1">Part-Time Today</p>
-                <p className="text-3xl font-bold text-purple-400">{partTimeTotal}</p>
-                <p className="text-xs text-white/40">
-                  B: {partTimeBoth}, M: {partTimeMorning}, E: {partTimeEvening}
-                </p>
-              </div>
-              <div className="stat-icon stat-icon-purple">
-                <Clock size={22} />
+          {/* Part-Time Row */}
+          <div className="grid grid-cols-1">
+            <div className="stat-card stat-card-purple card-animate">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-white/60 mb-1">Part-Time Today</p>
+                  <div className="flex items-end gap-3">
+                    <p className="text-3xl font-bold text-purple-400">{partTimeTotal}</p>
+                    <p className="text-sm text-white/50 mb-1">
+                      (Both: {partTimeBoth}, Morning: {partTimeMorning}, Evening: {partTimeEvening})
+                    </p>
+                  </div>
+                </div>
+                <div className="stat-icon stat-icon-purple">
+                  <Clock size={22} />
+                </div>
               </div>
             </div>
           </div>

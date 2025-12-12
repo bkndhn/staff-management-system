@@ -713,23 +713,23 @@ const SalaryManagement: React.FC<SalaryManagementProps> = ({
                       {staffMember?.name}
                     </td>
                     <td className="px-2 md:px-4 py-3 whitespace-nowrap text-center">
-                      <span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800">
+                      <span className="badge-premium badge-success">
                         {detail.presentDays}
                       </span>
                     </td>
                     <td className="px-2 md:px-4 py-3 whitespace-nowrap text-center">
-                      <span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-yellow-100 text-yellow-800">
+                      <span className="badge-premium badge-warning">
                         {detail.halfDays}
                       </span>
                     </td>
                     <td className="px-2 md:px-4 py-3 whitespace-nowrap text-center">
-                      <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${detail.leaveDays > 0 ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800'
+                      <span className={`badge-premium ${detail.leaveDays > 0 ? 'badge-danger' : 'badge-success'
                         }`}>
                         {detail.leaveDays}
                       </span>
                     </td>
                     <td className="px-2 md:px-4 py-3 whitespace-nowrap text-center">
-                      <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${detail.sundayAbsents > 0 ? 'bg-red-100 text-red-800' : 'bg-gray-100 text-gray-800'
+                      <span className={`badge-premium ${detail.sundayAbsents > 0 ? 'badge-danger' : 'badge-neutral'
                         }`}>
                         {detail.sundayAbsents}
                       </span>

@@ -444,7 +444,10 @@ function App() {
         reason,
         salaryHistory: [],
         totalAdvanceOutstanding,
-        lastAdvanceData: latestAdvance
+        lastAdvanceData: latestAdvance,
+        contactNumber: staffMember.contactNumber,
+        address: staffMember.address,
+        photo: staffMember.photo
       };
 
       // Save to database

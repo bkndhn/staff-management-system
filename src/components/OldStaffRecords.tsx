@@ -22,18 +22,18 @@ const OldStaffRecords: React.FC<OldStaffRecordsProps> = ({ oldStaffRecords, onRe
   const getLocationColor = (location: string) => {
     switch (location) {
       case 'Big Shop':
-        return 'bg-blue-100 text-blue-800';
+        return 'badge-premium badge-info';
       case 'Small Shop':
-        return 'bg-green-100 text-green-800';
+        return 'badge-premium badge-success';
       case 'Godown':
-        return 'bg-purple-100 text-purple-800';
+        return 'badge-premium badge-purple';
       default:
-        return 'bg-gray-100 text-gray-800';
+        return 'badge-premium badge-neutral';
     }
   };
 
   const getTypeColor = (type: string) => {
-    return type === 'full-time' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800';
+    return type === 'full-time' ? 'badge-premium badge-success' : 'badge-premium badge-warning';
   };
 
   const handleExportPDF = () => {
@@ -125,20 +125,27 @@ const OldStaffRecords: React.FC<OldStaffRecordsProps> = ({ oldStaffRecords, onRe
                     <tr key={record.id} className="hover:bg-gray-50">
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{index + 1}</td>
                       <td className="sticky left-0 z-10 bg-white px-6 py-4 whitespace-nowrap shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]">
-                        <div>
-                          <div className="text-sm font-medium text-gray-900">{record.name}</div>
-                          <div className="text-sm text-gray-500">
-                            {record.joinedDate} - {record.leftDate}
+                        <div className="flex items-center gap-3">
+                          {record.photo && (
+                            <img src={record.photo} alt="" className="w-8 h-8 rounded-full object-cover border border-gray-200" />
+                          )}
+                          <div>
+                            <div className="text-sm font-medium text-gray-900">{record.name}</div>
+                            <div className="text-sm text-gray-500">
+                              {record.joinedDate} - {record.leftDate}
+                            </div>
                           </div>
                         </div>
                       </td>
+
+
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getLocationColor(record.location)}`}>
+                        <span className={getLocationColor(record.location)}>
                           {record.location}
                         </span>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getTypeColor(record.type)}`}>
+                        <span className={getTypeColor(record.type)}>
                           {record.type}
                         </span>
                       </td>
@@ -218,10 +225,17 @@ const OldStaffRecords: React.FC<OldStaffRecordsProps> = ({ oldStaffRecords, onRe
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="space-y-4">
                 <h4 className="font-semibold text-gray-800 border-b pb-2">Personal Information</h4>
+                {selectedRecord.photo && (
+                  <div className="flex justify-center md:justify-start mb-2">
+                    <img src={selectedRecord.photo} alt={selectedRecord.name} className="w-24 h-24 rounded-full object-cover border-4 border-gray-100 shadow-sm" />
+                  </div>
+                )}
                 <div className="space-y-2 text-sm">
                   <div><span className="font-medium">Name:</span> {selectedRecord.name}</div>
                   <div><span className="font-medium">Location:</span> {selectedRecord.location}</div>
                   <div><span className="font-medium">Type:</span> {selectedRecord.type}</div>
+                  <div><span className="font-medium">Contact:</span> {selectedRecord.contactNumber || 'N/A'}</div>
+                  <div><span className="font-medium">Address:</span> {selectedRecord.address || 'N/A'}</div>
                   <div><span className="font-medium">Experience:</span> {selectedRecord.experience}</div>
                   <div><span className="font-medium">Joined:</span> {selectedRecord.joinedDate}</div>
                   <div><span className="font-medium">Left:</span> {selectedRecord.leftDate}</div>

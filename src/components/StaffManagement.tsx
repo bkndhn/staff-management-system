@@ -70,7 +70,10 @@ const StaffManagement: React.FC<StaffManagementProps> = ({
     joinedDate: new Date().toISOString().split('T')[0],
     salarySupplements: {} as Record<string, number>,
     sundayPenalty: true,
-    salaryCalculationDays: 30
+    salaryCalculationDays: 30,
+    contactNumber: '',
+    address: '',
+    photo: ''
   });
 
   // Set default location when locations load
@@ -79,6 +82,18 @@ const StaffManagement: React.FC<StaffManagementProps> = ({
       setFormData(prev => ({ ...prev, location: locations[0]?.name }));
     }
   }, [locations]);
+
+  // Handle photo upload
+  const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setFormData(prev => ({ ...prev, photo: reader.result as string }));
+      };
+      reader.readAsDataURL(file);
+    }
+  };
 
   const activeStaff = staff.filter(member => {
     if (!member.isActive) return false;
@@ -205,7 +220,10 @@ const StaffManagement: React.FC<StaffManagementProps> = ({
       joinedDate: new Date().toISOString().split('T')[0],
       salarySupplements: {},
       sundayPenalty: true,
-      salaryCalculationDays: 30
+      salaryCalculationDays: 30,
+      contactNumber: '',
+      address: '',
+      photo: ''
     });
   };
 
@@ -260,7 +278,10 @@ const StaffManagement: React.FC<StaffManagementProps> = ({
       joinedDate: member.joinedDate,
       salarySupplements: supplements,
       sundayPenalty: member.sundayPenalty ?? true,
-      salaryCalculationDays: member.salaryCalculationDays || 30
+      salaryCalculationDays: member.salaryCalculationDays || 30,
+      contactNumber: member.contactNumber || '',
+      address: member.address || '',
+      photo: member.photo || ''
     });
     setEditingStaff(member);
     setShowAddForm(true);
@@ -479,6 +500,53 @@ const StaffManagement: React.FC<StaffManagementProps> = ({
                   className="input-premium"
                   required
                 />
+              </div>
+
+              {/* Contact & Personal Details */}
+              <div>
+                <label className="block text-sm font-medium text-white/70 mb-1">Contact Number</label>
+                <input
+                  type="text"
+                  value={formData.contactNumber}
+                  onChange={(e) => setFormData({ ...formData, contactNumber: e.target.value })}
+                  className="input-premium"
+                  placeholder="+91..."
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-white/70 mb-1">Address</label>
+                <input
+                  type="text"
+                  value={formData.address}
+                  onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+                  className="input-premium"
+                  placeholder="Full address"
+                />
+              </div>
+              <div className="md:col-span-1">
+                <label className="block text-sm font-medium text-white/70 mb-1">Passport Photo</label>
+                <div className="flex items-center gap-3">
+                  {formData.photo ? (
+                    <img src={formData.photo} alt="Preview" className="w-10 h-10 rounded-full object-cover border border-white/20" />
+                  ) : (
+                    <div className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center text-white/40">
+                      <Users size={20} />
+                    </div>
+                  )}
+                  <label className="cursor-pointer bg-white/10 hover:bg-white/20 text-white px-3 py-1.5 rounded-lg text-sm transition-colors">
+                    Upload
+                    <input type="file" accept="image/*" onChange={handlePhotoChange} className="hidden" />
+                  </label>
+                  {formData.photo && (
+                    <button
+                      type="button"
+                      onClick={() => setFormData(prev => ({ ...prev, photo: '' }))}
+                      className="text-white/40 hover:text-red-400 p-1"
+                    >
+                      <X size={16} />
+                    </button>
+                  )}
+                </div>
               </div>
               <div>
                 <label className="block text-sm font-medium text-white/70 mb-1">Basic Salary</label>

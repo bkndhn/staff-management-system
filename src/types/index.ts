@@ -1,6 +1,26 @@
-shift: 'Morning' | 'Evening' | 'Both';
-ratePerDay: number;
-ratePerShift: number;
+export interface Staff {
+  id: string;
+  name: string;
+  location: string;
+  type: 'full-time' | 'part-time';
+  shift?: 'Morning' | 'Evening' | 'Both';
+  ratePerDay?: number;
+  ratePerShift?: number;
+  experience: string;
+  basicSalary: number;
+  incentive: number;
+  hra: number;
+  totalSalary: number;
+  joinedDate: string;
+  isActive: boolean;
+  sundayPenalty?: boolean;
+  salaryCalculationDays?: number;
+  salarySupplements?: Record<string, number>;
+  mealAllowance?: number;
+  displayOrder?: number;
+  contactNumber?: string;
+  address?: string;
+  photo?: string;
 }
 
 export interface Attendance {
@@ -88,6 +108,9 @@ export interface OldStaffRecord {
   salaryHistory: SalaryDetail[];
   totalAdvanceOutstanding: number;
   lastAdvanceData?: AdvanceDeduction; // Store last month's advance data for rejoin
+  contactNumber?: string;
+  address?: string;
+  photo?: string;
 }
 
 export interface AdvanceDeduction {

@@ -67,6 +67,9 @@ export const staffService = {
     if (updates.displayOrder !== undefined) (dbUpdates as any).display_order = updates.displayOrder;
     if (updates.salarySupplements !== undefined) (dbUpdates as any).salary_supplements = updates.salarySupplements;
     if (updates.mealAllowance !== undefined) (dbUpdates as any).meal_allowance = updates.mealAllowance;
+    if (updates.contactNumber !== undefined) (dbUpdates as any).contact_number = updates.contactNumber;
+    if (updates.address !== undefined) (dbUpdates as any).address = updates.address;
+    if (updates.photo !== undefined) (dbUpdates as any).photo_url = updates.photo;
 
     const { data, error } = await supabase
       .from('staff')
@@ -153,7 +156,10 @@ export const staffService = {
       salaryCalculationDays: dbStaff.salary_calculation_days || 30,
       salarySupplements: dbStaff.salary_supplements || {},
       mealAllowance: dbStaff.meal_allowance || 0,
-      displayOrder: dbStaff.display_order
+      displayOrder: dbStaff.display_order,
+      contactNumber: dbStaff.contact_number,
+      address: dbStaff.address,
+      photo: dbStaff.photo_url
     };
   },
 
@@ -173,7 +179,10 @@ export const staffService = {
       salary_calculation_days: staff.salaryCalculationDays || 30,
       salary_supplements: staff.salarySupplements || {},
       meal_allowance: staff.mealAllowance || 0,
-      display_order: staff.displayOrder || 0
+      display_order: staff.displayOrder || 0,
+      contact_number: staff.contactNumber,
+      address: staff.address,
+      photo_url: staff.photo
     };
   }
 };

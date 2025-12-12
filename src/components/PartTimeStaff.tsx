@@ -1312,12 +1312,12 @@ const PartTimeStaff: React.FC<PartTimeStaffProps> = ({
                                             {record.staffName}
                                         </td>
                                         <td className="px-6 py-4 whitespace-nowrap">
-                                            <span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-purple-100 text-purple-800">
+                                            <span className="badge-premium badge-purple">
                                                 {record.location}
                                             </span>
                                         </td>
                                         <td className="px-6 py-4 whitespace-nowrap">
-                                            <span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-blue-100 text-blue-800">
+                                            <span className="badge-premium badge-info">
                                                 {record.shift}
                                             </span>
                                             {(record.arrivalTime || record.leavingTime) && (
@@ -1329,7 +1329,10 @@ const PartTimeStaff: React.FC<PartTimeStaffProps> = ({
                                             )}
                                         </td>
                                         <td className="px-6 py-4 whitespace-nowrap">
-                                            <span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800">
+                                            <span className={`badge-premium ${record.status === 'Present' ? 'badge-success' :
+                                                record.status === 'Half Day' ? 'badge-warning' :
+                                                    'badge-danger'
+                                                }`}>
                                                 {record.status}
                                             </span>
                                         </td>
@@ -1539,7 +1542,7 @@ const PartTimeStaff: React.FC<PartTimeStaffProps> = ({
                                         </option>
                                     ))}
                                 </select>
-                                <span className="px-3 py-1 bg-green-100 text-green-800 text-sm font-medium rounded-full">
+                                <span className="badge-premium badge-success">
                                     {new Date(0, selectedMonth).toLocaleString('default', { month: 'long' })} {selectedYear}
                                 </span>
                             </div>
@@ -1584,7 +1587,7 @@ const PartTimeStaff: React.FC<PartTimeStaffProps> = ({
                                         ))}
                                     </select>
                                     {selectedWeekData && (
-                                        <span className="px-3 py-1 bg-purple-100 text-purple-800 text-sm font-medium rounded-full">
+                                        <span className="badge-premium badge-purple">
                                             Current Week: {selectedWeekData.start} - {selectedWeekData.end}
                                         </span>
                                     )}
@@ -1752,7 +1755,7 @@ const PartTimeStaff: React.FC<PartTimeStaffProps> = ({
                                                 {salary.staffName}
                                             </td>
                                             <td className="px-3 md:px-6 py-4 whitespace-nowrap">
-                                                <span className="px-2 py-1 text-xs font-semibold rounded-full bg-purple-100 text-purple-800">
+                                                <span className="badge-premium badge-purple">
                                                     {salary.location}
                                                 </span>
                                             </td>

@@ -19,7 +19,7 @@ export const oldStaffService = {
 
   async create(record: Omit<OldStaffRecord, 'id'>): Promise<OldStaffRecord> {
     const dbRecord = this.mapToDatabase(record);
-    
+
     const { data, error } = await supabase
       .from('old_staff_records')
       .insert([dbRecord])
@@ -63,7 +63,10 @@ export const oldStaffService = {
       reason: dbRecord.reason,
       salaryHistory: [], // This would need separate table if needed
       totalAdvanceOutstanding: dbRecord.total_advance_outstanding,
-      lastAdvanceData: dbRecord.last_advance_data
+      lastAdvanceData: dbRecord.last_advance_data,
+      contactNumber: dbRecord.contact_number,
+      address: dbRecord.address,
+      photo: dbRecord.photo_url
     };
   },
 
@@ -82,7 +85,10 @@ export const oldStaffService = {
       left_date: record.leftDate,
       reason: record.reason,
       total_advance_outstanding: record.totalAdvanceOutstanding,
-      last_advance_data: record.lastAdvanceData
+      last_advance_data: record.lastAdvanceData,
+      contact_number: record.contactNumber,
+      address: record.address,
+      photo_url: record.photo
     };
   }
 };

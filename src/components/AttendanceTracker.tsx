@@ -59,39 +59,39 @@ const AttendanceTracker: React.FC<AttendanceTrackerProps> = ({
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'Present':
-        return 'bg-green-100 text-green-800';
+        return 'badge-premium badge-success';
       case 'Half Day':
-        return 'bg-yellow-100 text-yellow-800';
+        return 'badge-premium badge-warning';
       case 'Absent':
-        return 'bg-red-100 text-red-800';
+        return 'badge-premium badge-danger';
       default:
-        return 'bg-gray-100 text-gray-800';
+        return 'badge-premium badge-neutral';
     }
   };
 
   const getLocationColor = (location: string) => {
     switch (location) {
       case 'Big Shop':
-        return 'bg-blue-100 text-blue-800';
+        return 'badge-premium badge-info';
       case 'Small Shop':
-        return 'bg-green-100 text-green-800';
+        return 'badge-premium badge-success';
       case 'Godown':
-        return 'bg-purple-100 text-purple-800';
+        return 'badge-premium badge-purple';
       default:
-        return 'bg-gray-100 text-gray-800';
+        return 'badge-premium badge-neutral';
     }
   };
 
   const getShiftColor = (shift: string) => {
     switch (shift) {
       case 'Morning':
-        return 'bg-orange-100 text-orange-800';
+        return 'badge-premium badge-warning';
       case 'Evening':
-        return 'bg-indigo-100 text-indigo-800';
+        return 'badge-premium badge-purple';
       case 'Both':
-        return 'bg-pink-100 text-pink-800';
+        return 'badge-premium badge-info';
       default:
-        return 'bg-gray-100 text-gray-800';
+        return 'badge-premium badge-neutral';
     }
   };
 

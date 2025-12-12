@@ -56,6 +56,217 @@
   --safe-area-bottom: env(safe-area-inset-bottom, 0px);
 }
 
+/* ============================================
+   LIGHT THEME OVERRIDE
+   ============================================ */
+body.light-theme {
+  --bg-primary: #f5f7fa;
+  --bg-secondary: #ffffff;
+  --bg-tertiary: #e8ecf1;
+  --bg-card: rgba(255, 255, 255, 0.95);
+  --bg-card-hover: rgba(255, 255, 255, 1);
+
+  /* Text Colors - Dark for light theme */
+  --text-primary: #1a1a2e;
+  --text-secondary: rgba(26, 26, 46, 0.7);
+  --text-muted: rgba(26, 26, 46, 0.5);
+
+  /* Glass Effects - Darker for light theme */
+  --glass-bg: rgba(0, 0, 0, 0.02);
+  --glass-bg-strong: rgba(0, 0, 0, 0.05);
+  --glass-border: rgba(0, 0, 0, 0.08);
+  --glass-border-strong: rgba(0, 0, 0, 0.15);
+
+  /* Shadows - Lighter for light theme */
+  --shadow-soft: 0 4px 24px rgba(0, 0, 0, 0.08);
+  --shadow-medium: 0 8px 32px rgba(0, 0, 0, 0.12);
+  --shadow-strong: 0 12px 48px rgba(0, 0, 0, 0.15);
+  --shadow-glow-primary: 0 0 40px rgba(102, 126, 234, 0.15);
+  --shadow-glow-success: 0 0 40px rgba(56, 239, 125, 0.15);
+}
+
+/* Light theme border overrides */
+body.light-theme .border-white\/10,
+body.light-theme .border-white\/20,
+body.light-theme .border-white\/30 {
+  border-color: rgba(0, 0, 0, 0.1) !important;
+}
+
+body.light-theme .bg-white\/5,
+body.light-theme .bg-white\/10 {
+  background-color: rgba(0, 0, 0, 0.05) !important;
+}
+
+body.light-theme .text-white\/30,
+body.light-theme .text-white\/20 {
+  color: rgba(26, 26, 46, 0.4) !important;
+}
+
+body.light-theme .divide-white\/10>*+* {
+  border-color: rgba(0, 0, 0, 0.1) !important;
+}
+
+/* Light theme body background */
+body.light-theme {
+  background: linear-gradient(135deg, #f5f7fa 0%, #e4e8ec 100%);
+}
+
+body.light-theme::before {
+  background: radial-gradient(ellipse at top left, rgba(102, 126, 234, 0.08) 0%, transparent 50%),
+    radial-gradient(ellipse at bottom right, rgba(168, 85, 247, 0.08) 0%, transparent 50%);
+}
+
+/* Light theme text color overrides */
+body.light-theme h1,
+body.light-theme h2,
+body.light-theme h3,
+body.light-theme h4,
+body.light-theme h5,
+body.light-theme h6 {
+  color: #1a1a2e !important;
+}
+
+body.light-theme .text-white {
+  color: #1a1a2e !important;
+}
+
+body.light-theme .text-white\/50,
+body.light-theme .text-white\/60,
+body.light-theme .text-white\/70,
+body.light-theme .text-white\/40 {
+  color: rgba(26, 26, 46, 0.6) !important;
+}
+
+body.light-theme p {
+  color: #1a1a2e !important;
+}
+
+body.light-theme label {
+  color: rgba(26, 26, 46, 0.7) !important;
+}
+
+/* Light theme card backgrounds */
+body.light-theme .glass-card,
+body.light-theme .glass-card-static,
+body.light-theme .stat-card {
+  background: rgba(255, 255, 255, 0.9) !important;
+  border-color: rgba(0, 0, 0, 0.1) !important;
+}
+
+/* Light theme inputs */
+body.light-theme .input-premium,
+body.light-theme input[type="text"],
+body.light-theme input[type="number"],
+body.light-theme input[type="date"],
+body.light-theme input[type="email"],
+body.light-theme input[type="password"],
+body.light-theme select,
+body.light-theme textarea {
+  background: rgba(255, 255, 255, 0.9) !important;
+  border-color: rgba(0, 0, 0, 0.15) !important;
+  color: #1a1a2e !important;
+}
+
+/* Light theme tables */
+body.light-theme table {
+  color: #1a1a2e !important;
+}
+
+body.light-theme th {
+  background: rgba(102, 126, 234, 0.1) !important;
+  color: #1a1a2e !important;
+}
+
+body.light-theme td {
+  color: #1a1a2e !important;
+  border-color: rgba(0, 0, 0, 0.08) !important;
+}
+
+body.light-theme tr:hover td {
+  background: rgba(102, 126, 234, 0.05) !important;
+}
+
+/* Light theme navigation */
+body.light-theme nav,
+body.light-theme .nav-premium {
+  background: rgba(255, 255, 255, 0.95) !important;
+  border-color: rgba(0, 0, 0, 0.1) !important;
+}
+
+body.light-theme .nav-item {
+  color: #1a1a2e !important;
+}
+
+/* Light theme buttons */
+body.light-theme .btn-secondary,
+body.light-theme button.bg-gray-600,
+body.light-theme button.bg-gray-700 {
+  background: rgba(0, 0, 0, 0.1) !important;
+  color: #1a1a2e !important;
+}
+
+/* Light theme badge overrides */
+body.light-theme .badge-success,
+body.light-theme .text-green-500,
+body.light-theme .text-green-400 {
+  background-color: rgba(16, 185, 129, 0.1) !important;
+  color: #047857 !important;
+  /* darker green */
+  border-color: rgba(16, 185, 129, 0.2) !important;
+}
+
+body.light-theme .badge-warning,
+body.light-theme .text-yellow-500,
+body.light-theme .text-amber-400 {
+  background-color: rgba(245, 158, 11, 0.1) !important;
+  color: #b45309 !important;
+  /* darker amber */
+  border-color: rgba(245, 158, 11, 0.2) !important;
+}
+
+body.light-theme .badge-danger,
+body.light-theme .text-red-500,
+body.light-theme .text-red-400 {
+  background-color: rgba(239, 68, 68, 0.1) !important;
+  color: #b91c1c !important;
+  /* darker red */
+  border-color: rgba(239, 68, 68, 0.2) !important;
+}
+
+body.light-theme .badge-info,
+body.light-theme .text-blue-500,
+body.light-theme .text-blue-400 {
+  background-color: rgba(59, 130, 246, 0.1) !important;
+  color: #1d4ed8 !important;
+  /* darker blue */
+  border-color: rgba(59, 130, 246, 0.2) !important;
+}
+
+body.light-theme .badge-purple,
+body.light-theme .text-purple-500,
+body.light-theme .text-purple-400 {
+  background-color: rgba(139, 92, 246, 0.1) !important;
+  color: #6d28d9 !important;
+  /* darker purple */
+  border-color: rgba(139, 92, 246, 0.2) !important;
+}
+
+/* Fix for light theme specific text colors in tables/cards */
+body.light-theme .text-gray-400 {
+  color: #6b7280 !important;
+}
+
+body.light-theme .text-white\/60,
+body.light-theme .text-white\/50 {
+  color: #4b5563 !important;
+}
+
+/* Date picker visibility fix */
+body.light-theme input[type="date"] {
+  color-scheme: light;
+  color: #1a1a2e !important;
+}
+
 /* Base Styles */
 html {
   scroll-behavior: smooth;

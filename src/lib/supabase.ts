@@ -35,6 +35,9 @@ export interface DatabaseStaff {
   salary_supplements: Record<string, number>;
   meal_allowance: number;
   display_order: number;
+  contact_number?: string;
+  address?: string;
+  photo_url?: string;
   created_at?: string;
   updated_at?: string;
 }
@@ -84,5 +87,8 @@ export interface DatabaseOldStaffRecord {
   reason: string;
   total_advance_outstanding: number;
   last_advance_data?: any;
+  contact_number?: string;
+  address?: string;
+  photo_url?: string;
   created_at: string;
 }
