@@ -305,11 +305,11 @@ const StaffManagement: React.FC<StaffManagementProps> = ({
 
   const getLocationColor = (location: string): string => {
     const colors: Record<string, string> = {
-      'Big Shop': 'bg-blue-100 text-blue-800',
-      'Small Shop': 'bg-green-100 text-green-800',
-      'Godown': 'bg-purple-100 text-purple-800'
+      'Big Shop': 'badge-premium badge-info',
+      'Small Shop': 'badge-premium badge-success',
+      'Godown': 'badge-premium badge-purple'
     };
-    return colors[location] || 'bg-gray-100 text-gray-800';
+    return colors[location] || 'badge-premium badge-neutral';
   };
 
   const getStaffSalaryHikes = (staffId: string) => {
@@ -797,7 +797,7 @@ const StaffManagement: React.FC<StaffManagementProps> = ({
                       </div>
                     </td>
                     <td className="px-3 py-4">
-                      <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getLocationColor(member.location)}`}>
+                      <span className={getLocationColor(member.location)}>
                         {member.location}
                       </span>
                     </td>
@@ -817,8 +817,8 @@ const StaffManagement: React.FC<StaffManagementProps> = ({
                     <td className="px-3 py-4">
                       <button
                         onClick={() => setShowSalaryHistory(member)}
-                        className={`flex items-center gap-1 px-2 py-1 text-xs rounded-full ${hasHikes ? 'bg-green-100 text-green-800 hover:bg-green-200' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                          }`}
+                        className={`flex items-center gap-1 px-2 py-1 text-xs rounded-full ${hasHikes ? 'badge-premium badge-success' : 'badge-premium badge-neutral'
+                          } hover:opacity-80 transition-opacity border-0`}
                       >
                         <TrendingUp size={12} />
                         {hasHikes ? `${memberHikes.length} hikes` : 'No hikes'}

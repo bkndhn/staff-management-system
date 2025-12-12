@@ -36,7 +36,7 @@ export const attendanceService = {
 
   async upsert(attendance: Omit<Attendance, 'id'>): Promise<Attendance> {
     const dbAttendance = this.mapToDatabase(attendance);
-    
+
     const { data, error } = await supabase
       .from('attendance')
       .upsert([dbAttendance], {
@@ -55,7 +55,7 @@ export const attendanceService = {
 
   async bulkUpsert(attendanceRecords: Omit<Attendance, 'id'>[]): Promise<Attendance[]> {
     const dbRecords = attendanceRecords.map(this.mapToDatabase);
-    
+
     const { data, error } = await supabase
       .from('attendance')
       .upsert(dbRecords, {
@@ -71,7 +71,7 @@ export const attendanceService = {
     return data.map(this.mapFromDatabase);
   },
 
-  async delete(id: string): Promise<void> {
+  async delete(id: string): Promise<{ error: any }> {
     const { error } = await supabase
       .from('attendance')
       .delete()
@@ -79,8 +79,9 @@ export const attendanceService = {
 
     if (error) {
       console.error('Error deleting attendance:', error);
-      throw error;
     }
+
+    return { error };
   },
 
   mapFromDatabase(dbAttendance: DatabaseAttendance): Attendance {

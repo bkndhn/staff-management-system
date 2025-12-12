@@ -49,6 +49,38 @@ function App() {
     onConfirm: (isHike: boolean, reason?: string) => void;
   } | null>(null);
 
+  // Theme state - Lifted from Dashboard
+  const [isDarkTheme, setIsDarkTheme] = useState(() => {
+    const savedTheme = localStorage.getItem('theme');
+    // Default to light theme (only return true if 'dark' is explicitly saved)
+    return savedTheme === 'dark';
+  });
+
+  // Apply theme on change
+  useEffect(() => {
+    const metaThemeColor = document.querySelector('meta[name="theme-color"]');
+
+    if (isDarkTheme) {
+      document.body.classList.remove('light-theme');
+      localStorage.setItem('theme', 'dark');
+      // Update status bar color for dark theme
+      if (metaThemeColor) {
+        metaThemeColor.setAttribute('content', '#0f0f1a');
+      }
+    } else {
+      document.body.classList.add('light-theme');
+      localStorage.setItem('theme', 'light');
+      // Update status bar color for light theme
+      if (metaThemeColor) {
+        metaThemeColor.setAttribute('content', '#f5f7fa');
+      }
+    }
+  }, [isDarkTheme]);
+
+  const toggleTheme = () => {
+    setIsDarkTheme(!isDarkTheme);
+  };
+
   // Load all data from Supabase on app start
   useEffect(() => {
     // Check for existing login session with security validation
@@ -676,6 +708,8 @@ function App() {
             onDateChange={setSelectedDate}
             userRole={user?.role || 'manager'}
             userLocation={user?.location || ''}
+            isDarkTheme={isDarkTheme}
+            toggleTheme={toggleTheme}
           />
         );
       case 'Staff Management':

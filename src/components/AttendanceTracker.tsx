@@ -644,10 +644,8 @@ const AttendanceTracker: React.FC<AttendanceTrackerProps> = ({
                       )}
                     </div>
                   </td>
-                  {/* Type Column */}
-                  <td className="px-3 md:px-6 py-4 whitespace-nowrap">
-                    <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${data.type === 'full-time' ? 'bg-green-100 text-green-800' : 'bg-purple-100 text-purple-800'
-                      }`}>
+                  <td className="px-3 py-4 whitespace-nowrap">
+                    <span className={data.type === 'full-time' ? 'badge-premium badge-success' : 'badge-premium badge-purple'}>
                       {data.type}
                     </span>
                   </td>

@@ -265,6 +265,46 @@ body.light-theme .text-white\/50 {
 body.light-theme input[type="date"] {
   color-scheme: light;
   color: #1a1a2e !important;
+  background-color: rgba(255, 255, 255, 0.9) !important;
+}
+
+/* Mobile Nav Light Theme Override */
+body.light-theme .mobile-nav {
+  background: rgba(255, 255, 255, 0.95) !important;
+  border-top-color: rgba(0, 0, 0, 0.1) !important;
+}
+
+body.light-theme .mobile-nav-item span {
+  color: rgba(26, 26, 46, 0.6) !important;
+}
+
+body.light-theme .mobile-nav-item-active span {
+  color: white !important;
+}
+
+body.light-theme .mobile-nav-item svg {
+  color: rgba(26, 26, 46, 0.6) !important;
+}
+
+body.light-theme .mobile-nav-item-active svg {
+  color: white !important;
+}
+
+/* Force dark icon for date picker in light theme */
+body.light-theme input[type="date"]::-webkit-calendar-picker-indicator {
+  filter: invert(1);
+  opacity: 1;
+  cursor: pointer;
+}
+
+/* Stronger text overrides for light theme */
+body.light-theme .text-white {
+  color: #1a1a2e !important;
+}
+
+body.light-theme .text-white\/80,
+body.light-theme .text-white\/90 {
+  color: rgba(26, 26, 46, 0.9) !important;
 }
 
 /* Base Styles */

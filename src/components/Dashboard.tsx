@@ -10,6 +10,8 @@ interface DashboardProps {
   onDateChange: (date: string) => void;
   userRole?: 'admin' | 'manager';
   userLocation?: string;
+  isDarkTheme: boolean;
+  toggleTheme: () => void;
 }
 
 const Dashboard: React.FC<DashboardProps> = ({
@@ -18,37 +20,12 @@ const Dashboard: React.FC<DashboardProps> = ({
   selectedDate,
   onDateChange,
   userRole = 'manager',
-  userLocation = ''
+  userLocation = '',
+  isDarkTheme,
+  toggleTheme
 }) => {
-  // Theme state
-  const [isDarkTheme, setIsDarkTheme] = useState(() => {
-    const savedTheme = localStorage.getItem('theme');
-    return savedTheme !== 'light'; // Default to dark theme
-  });
 
-  // Apply theme on change
-  useEffect(() => {
-    if (isDarkTheme) {
-      document.body.classList.remove('light-theme');
-      localStorage.setItem('theme', 'dark');
-    } else {
-      document.body.classList.add('light-theme');
-      localStorage.setItem('theme', 'light');
-    }
-  }, [isDarkTheme]);
 
-  // Apply saved theme on mount
-  useEffect(() => {
-    const savedTheme = localStorage.getItem('theme');
-    if (savedTheme === 'light') {
-      document.body.classList.add('light-theme');
-      setIsDarkTheme(false);
-    }
-  }, []);
-
-  const toggleTheme = () => {
-    setIsDarkTheme(!isDarkTheme);
-  };
   const todayAttendance = attendance.filter(record => record.date === selectedDate);
 
   // For managers, filter staff and attendance to their location only
