@@ -180,6 +180,9 @@ export const getPreviousMonthAdvance = (
 };
 
 // Calculate salary based on attendance
+// Scenario 1: salaryCalculationDays = 26
+// Scenario 2: salaryCalculationDays = 30
+// Scenario 3: salaryCalculationDays = 0 (fixed salary)
 export const calculateSalary = (
   staff: Staff,
   attendanceMetrics: ReturnType<typeof calculateAttendanceMetrics>,
@@ -191,28 +194,88 @@ export const calculateSalary = (
 ) => {
   const { totalPresentDays, sundayAbsents, daysInMonth, presentDays, halfDays, leaveDays } = attendanceMetrics;
 
+  // Get salary calculation days from staff settings (default 26)
+  const calculationDays = staff.salaryCalculationDays || 26;
+
   let basicEarned: number;
   let incentiveEarned: number;
   let hraEarned: number;
+  let hraDeduction: number = 0; // Track HRA deduction internally
 
-  // Base salary calculation logic
-  if (totalPresentDays === 26) {
-    // Full month present
+  // SCENARIO 3: Fixed salary (calculationDays = 0)
+  if (calculationDays === 0) {
+    // No calculation based on present days - fixed salary
     basicEarned = staff.basicSalary;
     incentiveEarned = staff.incentive;
     hraEarned = staff.hra;
-  } else if (totalPresentDays >= 25) {
-    // Near full month (25-26 days)
-    basicEarned = roundToNearest10((staff.basicSalary / 26) * totalPresentDays);
-    incentiveEarned = staff.incentive;
-    hraEarned = staff.hra;
-  } else {
-    // Less than 25 days - pro-rated calculation
-    basicEarned = roundToNearest10((staff.basicSalary / 26) * totalPresentDays);
-    incentiveEarned = roundToNearest10((staff.incentive / 26) * totalPresentDays);
-    // HRA calculation: reduce pro-rata then add full HRA back
-    const reducedHRA = roundToNearest10((staff.hra / 26) * totalPresentDays);
-    hraEarned = staff.hra; // Full HRA is added back
+  }
+  // SCENARIO 1: 26 calculation days
+  else if (calculationDays === 26) {
+    // Basic calculation: (basicSalary / 26) * presentDays, rounded to nearest 10
+    if (totalPresentDays >= 26) {
+      basicEarned = staff.basicSalary;
+    } else {
+      basicEarned = roundToNearest10((staff.basicSalary / 26) * totalPresentDays);
+    }
+
+    // Incentive and HRA logic
+    if (totalPresentDays >= 25) {
+      // 25 or more days: Full incentive and full HRA
+      incentiveEarned = staff.incentive;
+      hraEarned = staff.hra;
+    } else {
+      // Less than 25 days: Pro-rated calculation with HRA deduction from incentive
+
+      // Calculate pro-rated incentive
+      const proRatedIncentive = roundToNearest10((staff.incentive / 26) * totalPresentDays);
+
+      // Calculate HRA reduction (what HRA would be vs full HRA)
+      const proRatedHRA = roundToNearest10((staff.hra / 26) * totalPresentDays);
+      hraDeduction = staff.hra - proRatedHRA; // This is the HRA shortfall
+
+      // HRA stays full (don't reduce HRA visually)
+      hraEarned = staff.hra;
+
+      // Deduct HRA shortfall from incentive
+      incentiveEarned = Math.max(0, proRatedIncentive - hraDeduction);
+    }
+  }
+  // SCENARIO 2: 30 calculation days
+  else if (calculationDays === 30) {
+    // Basic calculation: (basicSalary / 30) * presentDays, rounded to nearest 10
+    if (totalPresentDays >= 30) {
+      basicEarned = staff.basicSalary;
+    } else {
+      basicEarned = roundToNearest10((staff.basicSalary / 30) * totalPresentDays);
+    }
+
+    // Incentive and HRA logic for 30-day calculation
+    if (totalPresentDays >= 25) {
+      // 25 or more days: Full incentive and full HRA
+      incentiveEarned = staff.incentive;
+      hraEarned = staff.hra;
+    } else {
+      // Less than 25 days: Pro-rated incentive (no HRA deduction for 30-day scenario)
+      incentiveEarned = roundToNearest10((staff.incentive / 30) * totalPresentDays);
+      hraEarned = staff.hra; // Full HRA
+    }
+  }
+  // Default fallback (custom calculation days)
+  else {
+    // Use the custom calculationDays value
+    if (totalPresentDays >= calculationDays) {
+      basicEarned = staff.basicSalary;
+    } else {
+      basicEarned = roundToNearest10((staff.basicSalary / calculationDays) * totalPresentDays);
+    }
+
+    if (totalPresentDays >= 25) {
+      incentiveEarned = staff.incentive;
+      hraEarned = staff.hra;
+    } else {
+      incentiveEarned = roundToNearest10((staff.incentive / calculationDays) * totalPresentDays);
+      hraEarned = staff.hra;
+    }
   }
 
   // Calculate Sunday penalty - including half-day Sunday penalty
@@ -276,11 +339,13 @@ export const calculateSalary = (
     basicEarned: roundToNearest10(basicEarned),
     incentiveEarned: roundToNearest10(incentiveEarned),
     hraEarned: roundToNearest10(hraEarned),
+    hraDeduction: roundToNearest10(hraDeduction), // Internal tracking
     sundayPenalty: roundToNearest10(sundayPenalty),
     mealAllowance: roundToNearest10(mealAllowance),
     grossSalary,
     newAdv,
     netSalary,
+    calculationDays, // Include for reference
     isProcessed: false
   };
 };
