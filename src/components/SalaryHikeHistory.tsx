@@ -262,7 +262,8 @@ const SalaryHikeHistory: React.FC<SalaryHikeHistoryProps> = ({
                 </button>
                 <button
                   type="submit"
-                  className="px-3 py-1 text-xs text-white bg-blue-600 rounded hover:bg-blue-700"
+                  className="px-4 py-2 text-sm font-medium rounded hover:bg-blue-700"
+                  style={{ backgroundColor: '#2563eb', color: '#ffffff' }}
                 >
                   {editingHike ? 'Update Record' : 'Save Record'}
                 </button>

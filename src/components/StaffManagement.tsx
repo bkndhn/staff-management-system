@@ -13,6 +13,7 @@ interface StaffManagementProps {
   onUpdateStaff: (id: string, staff: Partial<Staff>) => void;
   onDeleteStaff: (id: string, reason: string) => void;
   onUpdateStaffOrder?: (newOrder: Staff[]) => void;
+  onRefreshStaff?: () => Promise<void>;
 }
 
 const StaffManagement: React.FC<StaffManagementProps> = ({
@@ -21,7 +22,8 @@ const StaffManagement: React.FC<StaffManagementProps> = ({
   onAddStaff,
   onUpdateStaff,
   onDeleteStaff,
-  onUpdateStaffOrder
+  onUpdateStaffOrder,
+  onRefreshStaff
 }) => {
   const formRef = useRef<HTMLDivElement>(null);
   const [showAddForm, setShowAddForm] = useState(false);
@@ -48,6 +50,10 @@ const StaffManagement: React.FC<StaffManagementProps> = ({
   const [editingCategory, setEditingCategory] = useState<string | null>(null);
   const [editLocationValue, setEditLocationValue] = useState('');
   const [editCategoryValue, setEditCategoryValue] = useState('');
+
+  // Modal states for viewing full address and image
+  const [viewAddressModal, setViewAddressModal] = useState<{ name: string; address: string } | null>(null);
+  const [viewImageModal, setViewImageModal] = useState<{ name: string; photo: string } | null>(null);
 
   // Fetch locations on mount
   React.useEffect(() => {
@@ -123,11 +129,17 @@ const StaffManagement: React.FC<StaffManagementProps> = ({
   const handleUpdateLocation = async (id: string) => {
     if (editLocationValue.trim()) {
       const { locationService } = await import('../services/locationService');
+      const oldLocation = locations.find(l => l.id === id)?.name;
       const updated = await locationService.updateLocation(id, editLocationValue.trim());
       if (updated) {
         setLocations(prev => prev.map(l => l.id === id ? updated : l));
         setEditingLocation(null);
         setEditLocationValue('');
+
+        // If location name changed, refresh staff data to get updated locations
+        if (oldLocation && oldLocation !== updated.name && onRefreshStaff) {
+          await onRefreshStaff();
+        }
       }
     }
   };
@@ -266,7 +278,12 @@ const StaffManagement: React.FC<StaffManagementProps> = ({
     setShowAddForm(false);
   };
 
-  const handleEdit = (member: Staff) => {
+  const handleEdit = async (member: Staff) => {
+    // Refetch locations to get any newly added ones
+    const { locationService } = await import('../services/locationService');
+    const freshLocations = await locationService.getLocations();
+    setLocations(freshLocations);
+
     const supplements = member.salarySupplements || {};
     setFormData({
       name: member.name,
@@ -524,10 +541,10 @@ const StaffManagement: React.FC<StaffManagementProps> = ({
                 />
               </div>
               <div className="md:col-span-1">
-                <label className="block text-sm font-medium text-white/70 mb-1">Passport Photo</label>
+                <label className="block text-sm font-medium text-white/70 mb-1">Image</label>
                 <div className="flex items-center gap-3">
                   {formData.photo ? (
-                    <img src={formData.photo} alt="Preview" className="w-10 h-10 rounded-full object-cover border border-white/20" />
+                    <img src={formData.photo} alt="Preview" className="w-12 h-12 rounded-full object-cover border-2 border-white/30" />
                   ) : (
                     <div className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center text-white/40">
                       <Users size={20} />
@@ -541,9 +558,9 @@ const StaffManagement: React.FC<StaffManagementProps> = ({
                     <button
                       type="button"
                       onClick={() => setFormData(prev => ({ ...prev, photo: '' }))}
-                      className="text-white/40 hover:text-red-400 p-1"
+                      className="text-red-400 hover:text-red-300 px-2 py-1 text-xs rounded border border-red-400/50 hover:border-red-300"
                     >
-                      <X size={16} />
+                      Remove
                     </button>
                   )}
                 </div>
@@ -758,6 +775,9 @@ const StaffManagement: React.FC<StaffManagementProps> = ({
                 ))}
                 <th>Total</th>
                 <th>Salary History</th>
+                <th>Contact</th>
+                <th>Address</th>
+                <th>Image</th>
                 <th>Actions</th>
               </tr>
             </thead>
@@ -824,6 +844,43 @@ const StaffManagement: React.FC<StaffManagementProps> = ({
                         {hasHikes ? `${memberHikes.length} hikes` : 'No hikes'}
                       </button>
                     </td>
+                    {/* Contact Column */}
+                    <td className="px-3 py-4 text-sm text-gray-700">
+                      {member.contactNumber ? (
+                        <span className="text-gray-900">{member.contactNumber}</span>
+                      ) : (
+                        <span className="text-gray-400 italic">-</span>
+                      )}
+                    </td>
+                    {/* Address Column */}
+                    <td className="px-3 py-4 text-sm text-gray-700">
+                      {member.address ? (
+                        <button
+                          onClick={() => setViewAddressModal({ name: member.name, address: member.address || '' })}
+                          className="text-indigo-600 font-medium max-w-[120px] truncate block cursor-pointer hover:text-indigo-800 text-left"
+                          title="Click to view full address"
+                        >
+                          📍 {member.address.length > 12 ? member.address.substring(0, 12) + '...' : member.address}
+                        </button>
+                      ) : (
+                        <span className="text-gray-400 italic">-</span>
+                      )}
+                    </td>
+                    {/* Image Column */}
+                    <td className="px-3 py-4">
+                      {member.photo ? (
+                        <button
+                          onClick={() => setViewImageModal({ name: member.name, photo: member.photo || '' })}
+                          className="cursor-pointer"
+                        >
+                          <img src={member.photo} alt={member.name} className="w-10 h-10 rounded-full object-cover border-2 border-indigo-200 hover:border-indigo-400 hover:scale-110 transition-all" />
+                        </button>
+                      ) : (
+                        <div className="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center text-gray-400">
+                          <Users size={16} />
+                        </div>
+                      )}
+                    </td>
                     <td className="px-3 py-4 text-sm">
                       <div className="flex space-x-2">
                         <button
@@ -852,30 +909,30 @@ const StaffManagement: React.FC<StaffManagementProps> = ({
 
       {/* Location Manager Modal */}
       {showLocationManager && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl p-6 max-w-md w-full">
-            <div className="flex items-center justify-between mb-6">
-              <h3 className="text-lg font-bold text-gray-800 flex items-center gap-2">
-                <MapPin className="text-purple-600" size={20} />
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-2 md:p-4">
+          <div className="bg-white rounded-xl p-4 md:p-6 w-full max-w-[95vw] md:max-w-md max-h-[90vh] overflow-hidden flex flex-col">
+            <div className="flex items-center justify-between mb-4 md:mb-6">
+              <h3 className="text-base md:text-lg font-bold text-gray-800 flex items-center gap-2">
+                <MapPin className="text-purple-600" size={18} />
                 Manage Locations
               </h3>
-              <button onClick={() => setShowLocationManager(false)} className="text-gray-400 hover:text-gray-600">
+              <button onClick={() => setShowLocationManager(false)} className="text-gray-400 hover:text-gray-600 p-1">
                 <X size={20} />
               </button>
             </div>
 
-            <div className="flex gap-2 mb-6">
+            <div className="flex flex-col sm:flex-row gap-2 mb-4 md:mb-6">
               <input
                 type="text"
                 value={newLocation}
                 onChange={(e) => setNewLocation(e.target.value)}
                 placeholder="New Location Name"
-                className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                className="flex-1 px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
               />
               <button
                 onClick={handleCreateLocation}
                 disabled={!newLocation.trim()}
-                className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:bg-gray-300 disabled:cursor-not-allowed"
+                className="px-4 py-2 bg-purple-600 text-white text-sm rounded-lg hover:bg-purple-700 disabled:bg-gray-300 disabled:cursor-not-allowed whitespace-nowrap"
               >
                 Add
               </button>
@@ -953,19 +1010,19 @@ const StaffManagement: React.FC<StaffManagementProps> = ({
 
       {/* Salary Category Manager Modal */}
       {showCategoryManager && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl p-6 max-w-md w-full">
-            <h3 className="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2">
-              <DollarSign className="text-green-600" size={20} />
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-2 md:p-4">
+          <div className="bg-white rounded-xl p-4 md:p-6 w-full max-w-[95vw] md:max-w-md max-h-[90vh] overflow-hidden flex flex-col">
+            <h3 className="text-base md:text-lg font-bold text-gray-800 mb-4 flex items-center gap-2">
+              <DollarSign className="text-green-600" size={18} />
               Manage Salary Categories
             </h3>
-            <div className="flex gap-2 mb-4">
+            <div className="flex flex-col sm:flex-row gap-2 mb-4">
               <input
                 type="text"
                 value={newCategory}
                 onChange={(e) => setNewCategory(e.target.value)}
                 placeholder="New Category Name"
-                className="flex-1 px-3 py-2 border border-gray-300 rounded-lg"
+                className="flex-1 px-3 py-2 text-sm border border-gray-300 rounded-lg"
               />
               <button
                 onClick={() => {
@@ -975,7 +1032,7 @@ const StaffManagement: React.FC<StaffManagementProps> = ({
                     setNewCategory('');
                   }
                 }}
-                className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
+                className="px-4 py-2 bg-green-600 text-white text-sm rounded-lg hover:bg-green-700 whitespace-nowrap"
               >
                 Add
               </button>
@@ -1047,8 +1104,57 @@ const StaffManagement: React.FC<StaffManagementProps> = ({
             </div>
           </div>
         </div>
-      )
-      }
+      )}
+
+      {/* Full Address View Modal */}
+      {viewAddressModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4" onClick={() => setViewAddressModal(null)}>
+          <div className="bg-white rounded-xl p-6 max-w-lg w-full shadow-2xl" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-bold text-gray-800 flex items-center gap-2">
+                <MapPin className="text-indigo-600" size={20} />
+                Address - {viewAddressModal.name}
+              </h3>
+              <button onClick={() => setViewAddressModal(null)} className="text-gray-400 hover:text-gray-600 p-1">
+                <X size={20} />
+              </button>
+            </div>
+            <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
+              <p className="text-gray-800 text-base leading-relaxed">{viewAddressModal.address}</p>
+            </div>
+            <div className="mt-4 flex justify-end">
+              <button
+                onClick={() => setViewAddressModal(null)}
+                className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Full Image View Modal */}
+      {viewImageModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-80 flex items-center justify-center z-50 p-4" onClick={() => setViewImageModal(null)}>
+          <div className="relative max-w-[90vw] max-h-[90vh]" onClick={(e) => e.stopPropagation()}>
+            <button
+              onClick={() => setViewImageModal(null)}
+              className="absolute -top-3 -right-3 bg-white text-gray-600 hover:text-gray-800 p-2 rounded-full shadow-lg z-10"
+            >
+              <X size={20} />
+            </button>
+            <div className="bg-white p-2 rounded-xl shadow-2xl">
+              <img
+                src={viewImageModal.photo}
+                alt={viewImageModal.name}
+                className="max-w-[85vw] max-h-[80vh] rounded-lg object-contain"
+              />
+              <p className="text-center text-gray-700 font-medium mt-2 pb-1">{viewImageModal.name}</p>
+            </div>
+          </div>
+        </div>
+      )}
     </div >
   );
 };

@@ -157,6 +157,9 @@ const PartTimeStaff: React.FC<PartTimeStaffProps> = ({
     const [showSettings, setShowSettings] = useState(false);
     const [partTimeRates, setPartTimeRates] = useState(settingsService.getPartTimeRates());
 
+    // Locations state - fetched from Supabase
+    const [availableLocations, setAvailableLocations] = useState<string[]>(['Big Shop', 'Small Shop', 'Godown']);
+
     // Load settlements from database on mount
     useEffect(() => {
         const loadSettlements = async () => {
@@ -168,6 +171,18 @@ const PartTimeStaff: React.FC<PartTimeStaffProps> = ({
             }
         };
         loadSettlements();
+    }, []);
+
+    // Load locations from Supabase via locationService
+    useEffect(() => {
+        const fetchLocations = async () => {
+            const { locationService } = await import('../services/locationService');
+            const locs = await locationService.getLocations();
+            if (locs.length > 0) {
+                setAvailableLocations(locs.map(loc => loc.name));
+            }
+        };
+        fetchLocations();
     }, []);
 
     const loadPastReport = async () => {
@@ -462,7 +477,7 @@ const PartTimeStaff: React.FC<PartTimeStaffProps> = ({
         // Sunday = Both shift = 21:30, Other days = Morning shift = 15:00
         leavingTime: new Date().getDay() === 0 ? '21:30' : '15:00'
     }]);
-    const [bulkLocation, setBulkLocation] = useState(userLocation || settingsService.getLocations()[0] || 'Big Shop');
+    const [bulkLocation, setBulkLocation] = useState(userLocation || 'Big Shop');
     const [newStaffData, setNewStaffData] = useState<{
         name: string;
         location: string;
@@ -479,6 +494,13 @@ const PartTimeStaff: React.FC<PartTimeStaffProps> = ({
         // Sunday = Both shift = 21:30, Other days = Morning shift = 15:00
         leavingTime: new Date().getDay() === 0 ? '21:30' : '15:00'
     });
+
+    // Update bulkLocation when availableLocations loads
+    useEffect(() => {
+        if (!userLocation && availableLocations.length > 0) {
+            setBulkLocation(availableLocations[0]);
+        }
+    }, [availableLocations, userLocation]);
 
     // Get recent names for smart suggestions
     const getRecentNames = () => {
@@ -1044,7 +1066,7 @@ const PartTimeStaff: React.FC<PartTimeStaffProps> = ({
         if (userLocation) {
             return [userLocation];
         }
-        return ['All', ...settingsService.getLocations()];
+        return ['All', ...availableLocations];
     };
     return (
         <div className="p-4 md:p-6 space-y-4 md:space-y-6">
@@ -1116,7 +1138,7 @@ const PartTimeStaff: React.FC<PartTimeStaffProps> = ({
                                 className="w-full md:w-1/3 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                                 disabled={!!userLocation}
                             >
-                                {settingsService.getLocations().map(loc => (<option key={loc} value={loc}>{loc}</option>))}
+                                {availableLocations.map(loc => (<option key={loc} value={loc}>{loc}</option>))}
                             </select>
                         </div>
 
@@ -1352,7 +1374,7 @@ const PartTimeStaff: React.FC<PartTimeStaffProps> = ({
                                                             onChange={(e) => setEditData({ ...editData, location: e.target.value })}
                                                             className="px-2 py-1 text-xs border rounded"
                                                         >
-                                                            {settingsService.getLocations().map(loc => (<option key={loc} value={loc}>{loc}</option>))}
+                                                            {availableLocations.map(loc => (<option key={loc} value={loc}>{loc}</option>))}
                                                         </select>
                                                         <select
                                                             value={editData.shift}

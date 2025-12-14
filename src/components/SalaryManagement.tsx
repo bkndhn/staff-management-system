@@ -683,7 +683,6 @@ const SalaryManagement: React.FC<SalaryManagementProps> = ({
                 <th className="px-2 md:px-4 py-3 md:py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">S.No</th>
                 <th className="px-2 md:px-4 py-3 md:py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider sticky left-0 z-10 bg-gray-50">Name</th>
                 <th className="px-2 md:px-4 py-3 md:py-4 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Present</th>
-                <th className="px-2 md:px-4 py-3 md:py-4 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Half Days</th>
                 <th className="px-2 md:px-4 py-3 md:py-4 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Leave</th>
                 <th className="px-2 md:px-4 py-3 md:py-4 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Sun Abs</th>
                 <th className="px-2 md:px-4 py-3 md:py-4 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Old Adv</th>
@@ -707,25 +706,20 @@ const SalaryManagement: React.FC<SalaryManagementProps> = ({
                 const tempData = tempAdvances[detail.staffId];
 
                 return (
-                  <tr key={detail.staffId} className="hover:bg-gray-50 text-sm md:text-base">
+                  <tr key={detail.staffId} className="hover:bg-gray-50 text-base">
                     <td className="px-2 md:px-4 py-3 whitespace-nowrap text-gray-900">{index + 1}</td>
                     <td className="px-2 md:px-4 py-3 whitespace-nowrap font-medium text-gray-900 sticky left-0 z-10 bg-white">
                       {staffMember?.name}
                     </td>
                     <td className="px-2 md:px-4 py-3 whitespace-nowrap text-center">
                       <span className="badge-premium badge-success">
-                        {detail.presentDays}
+                        {(detail.presentDays + detail.halfDays * 0.5).toFixed(1)}
                       </span>
                     </td>
                     <td className="px-2 md:px-4 py-3 whitespace-nowrap text-center">
-                      <span className="badge-premium badge-warning">
-                        {detail.halfDays}
-                      </span>
-                    </td>
-                    <td className="px-2 md:px-4 py-3 whitespace-nowrap text-center">
-                      <span className={`badge-premium ${detail.leaveDays > 0 ? 'badge-danger' : 'badge-success'
+                      <span className={`badge-premium ${(detail.leaveDays - detail.halfDays * 0.5) > 0 ? 'badge-danger' : 'badge-success'
                         }`}>
-                        {detail.leaveDays}
+                        {(detail.leaveDays - detail.halfDays * 0.5).toFixed(1)}
                       </span>
                     </td>
                     <td className="px-2 md:px-4 py-3 whitespace-nowrap text-center">
@@ -867,7 +861,7 @@ const SalaryManagement: React.FC<SalaryManagementProps> = ({
               })}
               {/* Totals Row */}
               <tr className="bg-gray-100 font-bold text-sm">
-                <td className="px-2 md:px-4 py-3 whitespace-nowrap" colSpan={6}>
+                <td className="px-2 md:px-4 py-3 whitespace-nowrap" colSpan={5}>
                   <span className="text-gray-800">TOTAL</span>
                 </td>
                 <td className="px-2 md:px-4 py-3 whitespace-nowrap text-center text-blue-600">
@@ -928,7 +922,11 @@ const SalaryManagement: React.FC<SalaryManagementProps> = ({
                         {salary.staffName}
                       </td>
                       <td className="px-3 md:px-6 py-4 whitespace-nowrap">
-                        <span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-purple-100 text-purple-800">
+                        <span className={`inline-flex px-3 py-1.5 text-sm font-semibold rounded-full ${salary.location === 'Big Shop' ? 'bg-blue-100 text-blue-700' :
+                          salary.location === 'Small Shop' ? 'bg-green-100 text-green-700' :
+                            salary.location === 'Godown' ? 'bg-purple-100 text-purple-700' :
+                              'bg-gray-100 text-gray-700'
+                          }`}>
                           {salary.location}
                         </span>
                       </td>

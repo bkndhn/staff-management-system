@@ -723,6 +723,7 @@ function App() {
               onUpdateStaff={updateStaff}
               onDeleteStaff={deleteStaff}
               onUpdateStaffOrder={handleUpdateStaffOrder}
+              onRefreshStaff={forceRefreshData}
             />
           </Suspense>
         );

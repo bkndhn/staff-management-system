@@ -39,12 +39,16 @@ const AttendanceTracker: React.FC<AttendanceTrackerProps> = ({
   const [selectedLocation, setSelectedLocation] = useState<string>('Big Shop');
   const [availableLocations, setAvailableLocations] = useState<string[]>(['Big Shop', 'Small Shop', 'Godown']);
 
-  // Load available locations from settings
+  // Load available locations from Supabase via locationService
   React.useEffect(() => {
-    const savedLocations = localStorage.getItem('staff_management_locations');
-    if (savedLocations) {
-      setAvailableLocations(JSON.parse(savedLocations));
-    }
+    const fetchLocations = async () => {
+      const { locationService } = await import('../services/locationService');
+      const locs = await locationService.getLocations();
+      if (locs.length > 0) {
+        setAvailableLocations(locs.map(loc => loc.name));
+      }
+    };
+    fetchLocations();
   }, []);
 
   const activeStaff = staff.filter(member => member.isActive);
@@ -375,48 +379,28 @@ const AttendanceTracker: React.FC<AttendanceTrackerProps> = ({
   const filteredStaff = getFilteredStaff();
   const filteredPartTimeAttendance = getFilteredPartTimeAttendance();
 
-  // Combine full-time and part-time staff for display based on filter
-  const combinedAttendanceData = [];
+  // Only show full-time staff in the attendance table (part-time details shown in Salary page)
+  const combinedAttendanceData: any[] = [];
 
-  if (filters.staffType === 'all' || filters.staffType === 'full-time') {
-    // Add full-time staff
-    filteredStaff.forEach((member, index) => {
-      const attendanceRecord = getAttendanceForDate(member.id, selectedDate);
-      const displayLocation = attendanceRecord?.location || member.location;
-      const displayName = attendanceRecord?.shift ? `${member.name} (${attendanceRecord.shift})` : member.name;
+  // Add full-time staff only
+  filteredStaff.forEach((member, index) => {
+    const attendanceRecord = getAttendanceForDate(member.id, selectedDate);
+    const displayLocation = attendanceRecord?.location || member.location;
+    const displayName = attendanceRecord?.shift ? `${member.name} (${attendanceRecord.shift})` : member.name;
 
-      combinedAttendanceData.push({
-        id: member.id,
-        serialNo: index + 1,
-        name: displayName,
-        location: displayLocation,
-        type: member.type,
-        shift: attendanceRecord?.shift || '-',
-        status: attendanceRecord?.status || 'Absent',
-        isPartTime: false,
-        originalName: member.name,
-        originalLocation: member.location
-      });
+    combinedAttendanceData.push({
+      id: member.id,
+      serialNo: index + 1,
+      name: displayName,
+      location: displayLocation,
+      type: member.type,
+      shift: attendanceRecord?.shift || '-',
+      status: attendanceRecord?.status || 'Absent',
+      isPartTime: false,
+      originalName: member.name,
+      originalLocation: member.location
     });
-  }
-
-  if (filters.staffType === 'all' || filters.staffType === 'part-time') {
-    // Add part-time staff
-    filteredPartTimeAttendance.forEach((record, index) => {
-      const baseIndex = filters.staffType === 'part-time' ? 0 : filteredStaff.length;
-      combinedAttendanceData.push({
-        id: record.id,
-        serialNo: baseIndex + index + 1,
-        name: record.staffName || 'Unknown',
-        location: record.location || 'Unknown',
-        type: 'part-time',
-        shift: record.shift || '-',
-        status: record.status,
-        isPartTime: true,
-        salary: record.salary || getPartTimeDailySalary(record.date)
-      });
-    });
-  }
+  });
 
   return (
     <div className="p-4 md:p-6 space-y-6">
@@ -558,11 +542,7 @@ const AttendanceTracker: React.FC<AttendanceTrackerProps> = ({
                 <th className="px-3 md:px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
                 <th className="px-3 md:px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
                 <th className="px-3 md:px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Location</th>
-                <th className="px-3 md:px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Type</th>
                 <th className="px-3 md:px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Shift</th>
-                {filters.staffType === 'part-time' && (
-                  <th className="px-3 md:px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Salary</th>
-                )}
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
@@ -644,11 +624,6 @@ const AttendanceTracker: React.FC<AttendanceTrackerProps> = ({
                       )}
                     </div>
                   </td>
-                  <td className="px-3 py-4 whitespace-nowrap">
-                    <span className={data.type === 'full-time' ? 'badge-premium badge-success' : 'badge-premium badge-purple'}>
-                      {data.type}
-                    </span>
-                  </td>
                   {/* Shift Column */}
                   <td className="px-3 md:px-6 py-4 whitespace-nowrap">
                     {data.shift !== '-' ? (
@@ -659,11 +634,6 @@ const AttendanceTracker: React.FC<AttendanceTrackerProps> = ({
                       <span className="text-gray-400">-</span>
                     )}
                   </td>
-                  {filters.staffType === 'part-time' && (
-                    <td className="px-3 md:px-6 py-4 whitespace-nowrap text-sm font-semibold text-green-600">
-                      {data.isPartTime ? `₹${data.salary}` : '-'}
-                    </td>
-                  )}
                 </tr>
               ))}
             </tbody>
