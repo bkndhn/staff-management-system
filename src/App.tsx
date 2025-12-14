@@ -95,7 +95,6 @@ function App() {
         if (loginData?.user?.email && loginData?.user?.role) {
           // Check if expired (if expiresAt exists)
           if (loginData.expiresAt && Date.now() > loginData.expiresAt) {
-            console.log('Session expired');
             localStorage.removeItem('staffManagementLogin');
             return;
           }
@@ -152,8 +151,6 @@ function App() {
       setAdvances(advanceData);
       setOldStaffRecords(oldStaffData);
       setSalaryHikes(salaryHikeData);
-
-      console.log('📊 Cache stats:', cacheService.getStats());
     } catch (error) {
       console.error('Error loading data:', error);
     } finally {

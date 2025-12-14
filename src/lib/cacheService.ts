@@ -177,12 +177,10 @@ export async function cachedFetch<T>(
     // Try to get from cache first
     const cached = cacheService.get<T>(key);
     if (cached !== null) {
-        console.log(`📦 Cache hit: ${key}`);
         return cached;
     }
 
     // Cache miss - fetch from Supabase
-    console.log(`🔄 Cache miss: ${key} - fetching from Supabase`);
     const data = await fetchFn();
 
     // Store in cache

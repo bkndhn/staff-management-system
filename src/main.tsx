@@ -68,7 +68,7 @@ class ErrorBoundary extends Component<{ children: ReactNode }, { hasError: boole
 //   });
 // }
 
-console.log('Application starting...');
+
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

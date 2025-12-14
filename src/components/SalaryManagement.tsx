@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Staff, Attendance, SalaryDetail, AdvanceDeduction, PartTimeSalaryDetail } from '../types';
-import { DollarSign, Download, Users, Calendar, TrendingUp, Edit2, Save, X, FileSpreadsheet, Search, FileText } from 'lucide-react';
+import { DollarSign, Download, Users, Calendar, TrendingUp, Edit2, Save, X, FileSpreadsheet, Search, FileText, MessageCircle } from 'lucide-react';
 import { calculateAttendanceMetrics, calculateSalary, calculatePartTimeSalary, roundToNearest10 } from '../utils/salaryCalculations';
 import { exportSalaryToExcel, exportSalaryPDF, generateSalarySlipPDF, exportBulkSalarySlipsPDF } from '../utils/exportUtils';
 import { settingsService } from '../services/settingsService';
@@ -357,6 +357,63 @@ const SalaryManagement: React.FC<SalaryManagementProps> = ({
     if (staffMember) {
       generateSalarySlipPDF(detail, staffMember, selectedMonth, selectedYear);
     }
+  };
+
+  // WhatsApp share salary slip
+  const handleWhatsAppShare = (detail: SalaryDetail) => {
+    const staffMember = staff.find(s => s.id === detail.staffId);
+    if (!staffMember) return;
+
+    const phoneNumber = staffMember.contactNumber?.replace(/[^0-9]/g, '');
+    if (!phoneNumber) {
+      alert(`No phone number found for ${staffMember.name}. Please add contact number in Staff Management.`);
+      return;
+    }
+
+    // Format phone number for India (add 91 if not present)
+    const formattedPhone = phoneNumber.startsWith('91') ? phoneNumber : `91${phoneNumber}`;
+
+    const monthName = new Date(0, selectedMonth).toLocaleString('default', { month: 'long' });
+    const presentDays = (detail.presentDays + detail.halfDays * 0.5).toFixed(1);
+    const leaveDays = (detail.leaveDays - detail.halfDays * 0.5).toFixed(1);
+
+    // Get salary category names
+    const basicName = salaryCategories.find(c => c.id === 'basic')?.name || 'Basic';
+    const incentiveName = salaryCategories.find(c => c.id === 'incentive')?.name || 'Incentive';
+    const hraName = salaryCategories.find(c => c.id === 'hra')?.name || 'HRA';
+    const mealName = salaryCategories.find(c => c.id === 'meal_allowance')?.name || 'Meal Allowance';
+
+    // Format salary slip message
+    const message = `📋 *SALARY SLIP*\n` +
+      `━━━━━━━━━━━━━━━━━━\n` +
+      `👤 *Name:* ${staffMember.name}\n` +
+      `📅 *Month:* ${monthName} ${selectedYear}\n` +
+      `📍 *Location:* ${staffMember.location}\n` +
+      `━━━━━━━━━━━━━━━━━━\n\n` +
+      `📊 *ATTENDANCE*\n` +
+      `• Present Days: ${presentDays}\n` +
+      `• Leave Days: ${leaveDays}\n` +
+      `• Sunday Absents: ${detail.sundayAbsents}\n\n` +
+      `💰 *EARNINGS*\n` +
+      `• ${basicName}: ₹${detail.basicEarned.toLocaleString()}\n` +
+      `• ${incentiveName}: ₹${detail.incentiveEarned.toLocaleString()}\n` +
+      `• ${hraName}: ₹${detail.hraEarned.toLocaleString()}\n` +
+      `• ${mealName}: ₹${detail.mealAllowance.toLocaleString()}\n\n` +
+      `📉 *DEDUCTIONS*\n` +
+      `• Old Advance: ₹${detail.oldAdv.toLocaleString()}\n` +
+      `• Current Advance: ₹${detail.curAdv.toLocaleString()}\n` +
+      `• Deduction: ₹${detail.deduction.toLocaleString()}\n` +
+      `• Sunday Penalty: ₹${detail.sundayPenalty.toLocaleString()}\n\n` +
+      `━━━━━━━━━━━━━━━━━━\n` +
+      `💵 *Gross Salary:* ₹${detail.grossSalary.toLocaleString()}\n` +
+      `✅ *Net Salary:* ₹${detail.netSalary.toLocaleString()}\n` +
+      `📌 *New Advance:* ₹${detail.newAdv.toLocaleString()}\n` +
+      `━━━━━━━━━━━━━━━━━━\n\n` +
+      `_Generated on ${new Date().toLocaleDateString()}_`;
+
+    // Open WhatsApp with pre-filled message
+    const whatsappUrl = `https://wa.me/${formattedPhone}?text=${encodeURIComponent(message)}`;
+    window.open(whatsappUrl, '_blank');
   };
 
   const getAdvanceForStaff = (staffId: string) => {
@@ -846,15 +903,24 @@ const SalaryManagement: React.FC<SalaryManagementProps> = ({
                     <td className="px-2 md:px-4 py-3 whitespace-nowrap text-center text-blue-600">
                       ₹{editMode ? (tempData?.newAdvance || 0) : detail.newAdv}
                     </td>
-                    {/* Actions - Download Slip */}
+                    {/* Actions - Download Slip & WhatsApp */}
                     <td className="px-2 md:px-4 py-3 whitespace-nowrap text-center">
-                      <button
-                        onClick={() => handleDownloadSingleSlip(detail)}
-                        className="inline-flex items-center justify-center p-1.5 text-purple-600 hover:bg-purple-100 rounded-lg transition-colors"
-                        title="Download Salary Slip"
-                      >
-                        <Download size={16} />
-                      </button>
+                      <div className="flex items-center justify-center gap-1">
+                        <button
+                          onClick={() => handleDownloadSingleSlip(detail)}
+                          className="inline-flex items-center justify-center p-1.5 text-purple-600 hover:bg-purple-100 rounded-lg transition-colors"
+                          title="Download Salary Slip"
+                        >
+                          <Download size={16} />
+                        </button>
+                        <button
+                          onClick={() => handleWhatsAppShare(detail)}
+                          className="inline-flex items-center justify-center p-1.5 text-green-600 hover:bg-green-100 rounded-lg transition-colors"
+                          title={staffMember?.contactNumber ? `Send via WhatsApp to ${staffMember.contactNumber}` : 'No phone number - Add in Staff Management'}
+                        >
+                          <MessageCircle size={16} />
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 );

@@ -1938,3 +1938,62 @@ label:has(input:checked) span,
 label:has(input:checked) .font-medium {
   color: #f97316 !important;
 }
+
+/* ============================================
+   STICKY TABLE HEADERS - Freeze on Scroll
+   ============================================ */
+.table-container {
+  background: var(--glass-bg);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid var(--glass-border);
+  border-radius: 16px;
+  overflow: hidden;
+}
+
+.table-container>.overflow-x-auto,
+.table-container .overflow-x-auto {
+  max-height: calc(100vh - 300px);
+  overflow-x: auto;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Force sticky header on table */
+.table-container .table-premium thead,
+.table-container table thead {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+}
+
+/* Ensure th has solid background for sticky to work */
+.table-container .table-premium th,
+.table-container table th {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  position: relative;
+}
+
+/* Desktop: More table height */
+@media (min-width: 769px) {
+
+  .table-container>.overflow-x-auto,
+  .table-container .overflow-x-auto {
+    max-height: calc(100vh - 260px);
+  }
+}
+
+/* Mobile: Less height for bottom nav */
+@media (max-width: 768px) {
+
+  .table-container>.overflow-x-auto,
+  .table-container .overflow-x-auto {
+    max-height: calc(100vh - 380px);
+  }
+
+  .table-container .table-premium th,
+  .table-container table th {
+    font-size: 0.65rem;
+    padding: 10px 6px;
+  }
+}

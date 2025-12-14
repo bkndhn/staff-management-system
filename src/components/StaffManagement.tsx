@@ -262,6 +262,13 @@ const StaffManagement: React.FC<StaffManagementProps> = ({
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
+    // Validate contact number (must be 10 digits)
+    const phoneDigits = formData.contactNumber.replace(/[^0-9]/g, '');
+    if (phoneDigits.length !== 10) {
+      alert('Please enter a valid 10-digit mobile number');
+      return;
+    }
+
     const salaryCategories = settingsService.getSalaryCategories();
     // Start with basic fields
     let totalSalary = (formData.basicSalary || 0) + (formData.incentive || 0) + (formData.hra || 0) + (formData.mealAllowance || 0);
@@ -541,14 +548,25 @@ const StaffManagement: React.FC<StaffManagementProps> = ({
 
               {/* Contact & Personal Details */}
               <div>
-                <label className="block text-sm font-medium text-white/70 mb-1">Contact Number</label>
+                <label className="block text-sm font-medium text-white/70 mb-1">
+                  Mobile Number <span className="text-red-400">*</span>
+                </label>
                 <input
-                  type="text"
+                  type="tel"
                   value={formData.contactNumber}
-                  onChange={(e) => setFormData({ ...formData, contactNumber: e.target.value })}
+                  onChange={(e) => {
+                    // Auto-format: keep only digits, max 10
+                    const digits = e.target.value.replace(/[^0-9]/g, '').slice(0, 10);
+                    setFormData({ ...formData, contactNumber: digits });
+                  }}
                   className="input-premium"
-                  placeholder="+91..."
+                  placeholder="10-digit mobile number"
+                  required
+                  pattern="[0-9]{10}"
+                  maxLength={10}
+                  title="Enter 10-digit mobile number (required for WhatsApp)"
                 />
+                <p className="text-xs text-white/50 mt-1">Required for WhatsApp salary slip</p>
               </div>
               <div>
                 <label className="block text-sm font-medium text-white/70 mb-1">Address</label>

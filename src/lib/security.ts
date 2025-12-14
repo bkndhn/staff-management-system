@@ -172,13 +172,11 @@ export function generateBrowserFingerprint(): string {
 export function validateSession(sessionData: any): boolean {
     // Basic check
     if (!sessionData) {
-        console.log('Session validation: no session data');
         return false;
     }
 
     // Ensure user data exists
     if (!sessionData.user || !sessionData.user.email || !sessionData.user.role) {
-        console.log('Session validation: missing user data');
         return false;
     }
 
@@ -186,7 +184,6 @@ export function validateSession(sessionData: any): boolean {
     if (sessionData.expiresAt) {
         const now = Date.now();
         if (now > sessionData.expiresAt) {
-            console.log('Session validation: session expired');
             return false;
         }
     }
