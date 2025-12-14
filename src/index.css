@@ -985,7 +985,8 @@ select.input-premium option {
   .table-premium td,
   .table-premium th {
     padding: 10px 8px;
-    font-size: 0.75rem;
+    font-size: 0.9375rem;
+    /* 15px */
   }
 
   /* Stats grid responsive */

@@ -272,70 +272,123 @@ const Dashboard: React.FC<DashboardProps> = ({
               ...locationEvening.map(record => `${record.staffName} (Evening)`)
             ];
 
-            // Get total full-time staff count at this location
-            const locationTotalFullTimeStaff = fullTimeStaff.filter(s => s.location === location.name).length;
+            // Get staff ASSIGNED to this location
+            const assignedStaff = fullTimeStaff.filter(s => s.location === location.name);
+            const locationTotalFullTimeStaff = assignedStaff.length;
 
-            // Get full-time staff with detailed names (including shift info for half-day)
-            const locationFullTimePresent = fullTimeAttendance.filter(record => {
+            // --- ASSIGNED STAFF PRESENT (at their own location) ---
+            const assignedPresent = fullTimeAttendance.filter(record => {
               const staffMember = activeStaff.find(s => s.id === record.staffId);
-              const attendanceLocation = record.location || staffMember?.location;
+              if (!staffMember || staffMember.location !== location.name) return false;
+              const attendanceLocation = record.location || staffMember.location;
               return record.status === 'Present' && attendanceLocation === location.name;
             }).map(record => formatStaffName(record.staffId, false));
 
-            const locationFullTimeHalfDay = fullTimeAttendance.filter(record => {
+            // --- ASSIGNED STAFF HALF-DAY (at their own location) ---
+            const assignedHalfDay = fullTimeAttendance.filter(record => {
               const staffMember = activeStaff.find(s => s.id === record.staffId);
-              const attendanceLocation = record.location || staffMember?.location;
+              if (!staffMember || staffMember.location !== location.name) return false;
+              const attendanceLocation = record.location || staffMember.location;
               return record.status === 'Half Day' && attendanceLocation === location.name;
             }).map(record => formatStaffName(record.staffId, false));
 
-            const locationFullTimeAbsent = fullTimeAttendance.filter(record => {
+            // --- ASSIGNED STAFF ABSENT ---
+            const assignedAbsent = fullTimeAttendance.filter(record => {
               const staffMember = activeStaff.find(s => s.id === record.staffId);
-              const attendanceLocation = record.location || staffMember?.location;
-              return record.status === 'Absent' && attendanceLocation === location.name;
+              if (!staffMember || staffMember.location !== location.name) return false;
+              return record.status === 'Absent';
             }).map(record => formatStaffName(record.staffId, false));
 
-            // Calculate total present value for this location
-            const locationTotalPresent = locationFullTimePresent.length + (locationFullTimeHalfDay.length * 0.5);
+            // --- TEMP/GUEST: Staff assigned elsewhere but working HERE today ---
+            const tempGuests = fullTimeAttendance.filter(record => {
+              const staffMember = activeStaff.find(s => s.id === record.staffId);
+              if (!staffMember) return false;
+              // Staff assigned to different location
+              if (staffMember.location === location.name) return false;
+              // But working at THIS location today
+              const attendanceLocation = record.location || staffMember.location;
+              return attendanceLocation === location.name && record.status !== 'Absent';
+            }).map(record => {
+              const staffMember = activeStaff.find(s => s.id === record.staffId);
+              return `${staffMember?.name} (from ${staffMember?.location})`;
+            });
+
+            // --- WORKING ELSEWHERE: Staff assigned HERE but working at different location ---
+            const workingElsewhere = fullTimeAttendance.filter(record => {
+              const staffMember = activeStaff.find(s => s.id === record.staffId);
+              if (!staffMember) return false;
+              // Staff assigned to THIS location
+              if (staffMember.location !== location.name) return false;
+              // But working at DIFFERENT location today
+              const attendanceLocation = record.location || staffMember.location;
+              return attendanceLocation !== location.name && record.status !== 'Absent';
+            }).map(record => {
+              const attendanceLocation = record.location;
+              const staffMember = activeStaff.find(s => s.id === record.staffId);
+              return `${staffMember?.name} (at ${attendanceLocation})`;
+            });
+
+            // Calculate actual present count (assigned staff at this location)
+            const locationTotalPresent = assignedPresent.length + assignedHalfDay.length;
 
             return (
               <div key={location.name} className="border-b border-white/10 pb-6 last:border-b-0 last:pb-0">
                 <h3 className="text-base md:text-lg font-semibold text-gradient mb-4 text-center">
-                  {location.name} - Total Present: {locationFullTimePresent.length + locationFullTimeHalfDay.length}
+                  {location.name} - Staff Present: {locationTotalPresent}/{locationTotalFullTimeStaff}
+                  {tempGuests.length > 0 && (
+                    <span className="text-sm text-cyan-400 ml-2">
+                      +{tempGuests.length} Temp
+                    </span>
+                  )}
                   {locationPartTimeData.length > 0 && (
                     <span className="text-sm text-white/60">
                       {' + Part-Time: '}{locationPartTimeData.length}
-                      {' ('}
-                      Both: {locationBoth.length}, Morning: {locationMorning.length}, Evening: {locationEvening.length}
-                      {')'}
                     </span>
                   )}
                 </h3>
 
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
                   <div className="glass-card-static p-4 border-l-4 border-emerald-500">
-                    <p className="text-base font-bold text-emerald-400 mb-2">Present: {locationFullTimePresent.length}/{locationTotalFullTimeStaff}</p>
+                    <p className="text-base font-bold text-emerald-400 mb-2">Present: {assignedPresent.length}/{locationTotalFullTimeStaff}</p>
                     <p className="text-sm text-white/60">
-                      {locationFullTimePresent.length > 0 ? locationFullTimePresent.join(', ') : 'None'}
+                      {assignedPresent.length > 0 ? assignedPresent.join(', ') : 'None'}
                     </p>
                   </div>
 
                   <div className="glass-card-static p-4 border-l-4 border-amber-500">
-                    <p className="text-base font-bold text-amber-400 mb-2">Half-day: {locationFullTimeHalfDay.length}</p>
+                    <p className="text-base font-bold text-amber-400 mb-2">Half-day: {assignedHalfDay.length}</p>
                     <p className="text-sm text-white/60">
-                      {locationFullTimeHalfDay.length > 0 ? locationFullTimeHalfDay.join(', ') : 'None'}
+                      {assignedHalfDay.length > 0 ? assignedHalfDay.join(', ') : 'None'}
                     </p>
                   </div>
 
                   <div className="glass-card-static p-4 border-l-4 border-red-500">
-                    <p className="text-base font-bold text-red-400 mb-2">Absent: {locationFullTimeAbsent.length}</p>
+                    <p className="text-base font-bold text-red-400 mb-2">Absent: {assignedAbsent.length}</p>
                     <p className="text-sm text-white/60">
-                      {locationFullTimeAbsent.length > 0 ? locationFullTimeAbsent.join(', ') : 'None'}
+                      {assignedAbsent.length > 0 ? assignedAbsent.join(', ') : 'None'}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Temp/Guest and Working Elsewhere Row */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="glass-card-static p-4 border-l-4 border-cyan-500">
+                    <p className="text-base font-bold text-cyan-400 mb-2">🔄 Temp/Guest: {tempGuests.length}</p>
+                    <p className="text-sm text-white/60">
+                      {tempGuests.length > 0 ? tempGuests.join(', ') : 'None'}
+                    </p>
+                  </div>
+
+                  <div className="glass-card-static p-4 border-l-4 border-orange-500">
+                    <p className="text-base font-bold text-orange-400 mb-2">📤 Working Elsewhere: {workingElsewhere.length}</p>
+                    <p className="text-sm text-white/60">
+                      {workingElsewhere.length > 0 ? workingElsewhere.join(', ') : 'None'}
                     </p>
                   </div>
 
                   <div className="glass-card-static p-4 border-l-4 border-purple-500">
                     <p className="text-base font-bold text-purple-400 mb-2">
-                      Part-Time: {locationPartTimeData.length} (B: {locationBoth.length}, M: {locationMorning.length}, E: {locationEvening.length})
+                      Part-Time: {locationPartTimeData.length}
                     </p>
                     <p className="text-sm text-white/60">
                       {partTimeNames.length > 0
