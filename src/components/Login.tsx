@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
-import { Lock, User, AlertCircle, Eye, EyeOff, Sparkles } from 'lucide-react';
+import { Lock, AlertCircle, Eye, EyeOff, Sparkles } from 'lucide-react';
 import {
-  simpleHash,
   isRateLimited,
   recordFailedAttempt,
   clearFailedAttempts,
@@ -9,39 +8,11 @@ import {
   isValidEmail,
   createSecureSession
 } from '../lib/security';
+import { userService } from '../services/userService';
 
 interface LoginProps {
   onLogin: (user: { email: string; role: string; location?: string }) => void;
 }
-
-// Secure user credentials with hashed passwords
-// In production, this should be stored in a secure backend database
-const SECURE_USERS = [
-  {
-    email: 'staff@admin.com',
-    passwordHash: simpleHash('Staffans7369'),
-    role: 'admin',
-    location: null
-  },
-  {
-    email: 'manager@bigshop.com',
-    passwordHash: simpleHash('MngrBig25'),
-    role: 'manager',
-    location: 'Big Shop'
-  },
-  {
-    email: 'manager@smallshop.com',
-    passwordHash: simpleHash('MngrSml25'),
-    role: 'manager',
-    location: 'Small Shop'
-  },
-  {
-    email: 'manager@godown.com',
-    passwordHash: simpleHash('MngrGdn25'),
-    role: 'manager',
-    location: 'Godown'
-  }
-];
 
 const Login: React.FC<LoginProps> = ({ onLogin }) => {
   const [email, setEmail] = useState('');
@@ -76,34 +47,36 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
     // Simulate network delay to prevent timing attacks
     await new Promise(resolve => setTimeout(resolve, 500 + Math.random() * 500));
 
-    // Secure password comparison using hash
-    const passwordHash = simpleHash(password);
-    const user = SECURE_USERS.find(u =>
-      u.email === sanitizedEmail && u.passwordHash === passwordHash
-    );
+    try {
+      // Authenticate against Supabase app_users table
+      const dbUser = await userService.validateLogin(sanitizedEmail, password);
 
-    if (user) {
-      // Clear failed attempts on success
-      clearFailedAttempts(sanitizedEmail);
+      if (dbUser) {
+        // Clear failed attempts on success
+        clearFailedAttempts(sanitizedEmail);
 
-      // Create secure session
-      const session = createSecureSession({
-        email: user.email,
-        role: user.role,
-        location: user.location
-      });
+        // Create secure session
+        const session = createSecureSession({
+          email: dbUser.email,
+          role: dbUser.role,
+          location: dbUser.location
+        });
 
-      localStorage.setItem('staffManagementLogin', JSON.stringify(session));
+        localStorage.setItem('staffManagementLogin', JSON.stringify(session));
 
-      onLogin({
-        email: user.email,
-        role: user.role,
-        location: user.location || undefined
-      });
-    } else {
-      // Record failed attempt and get appropriate error message
-      const result = recordFailedAttempt(sanitizedEmail);
-      setError(result.message);
+        onLogin({
+          email: dbUser.email,
+          role: dbUser.role,
+          location: dbUser.location || undefined
+        });
+      } else {
+        // Record failed attempt and get appropriate error message
+        const result = recordFailedAttempt(sanitizedEmail);
+        setError(result.message);
+      }
+    } catch (err) {
+      console.error('Login error:', err);
+      setError('Unable to connect to server. Please try again.');
     }
 
     setLoading(false);

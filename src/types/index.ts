@@ -143,7 +143,10 @@ export interface User {
   location?: string;
 }
 
-export type NavigationTab = 'Dashboard' | 'Staff Management' | 'Attendance' | 'Salary Management' | 'Part-Time Staff' | 'Old Staff Records';
+export type NavigationTab = 'Dashboard' | 'Staff Management' | 'Attendance' | 'Salary Management' | 'Part-Time Staff' | 'Old Staff Records' | 'Settings';
+
+// Re-export AppUser from userService
+export type { AppUser } from '../services/userService';
 
 export interface AttendanceFilter {
   date?: string;

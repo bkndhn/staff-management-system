@@ -26,7 +26,7 @@ export const locationService = {
         }));
     },
 
-    async addLocation(name: string): Promise<Location | null> {
+    async addLocation(name: string): Promise<{ location: Location | null; credentials?: { email: string; password: string } }> {
         const { data, error } = await supabase
             .from('locations')
             .insert([{ display_name: name, is_active: true }])
@@ -35,14 +35,24 @@ export const locationService = {
 
         if (error) {
             console.error('Error adding location:', error);
-            return null;
+            return { location: null };
         }
 
-        return {
+        const location: Location = {
             id: data.id,
             name: data.display_name,
             is_active: data.is_active
         };
+
+        // Auto-create manager user for the new location
+        try {
+            const { userService } = await import('./userService');
+            const { credentials } = await userService.createManagerForLocation(name);
+            return { location, credentials };
+        } catch (err) {
+            console.error('Error creating manager user for location:', err);
+            return { location };
+        }
     },
 
     async updateLocation(id: string, name: string): Promise<Location | null> {
@@ -92,7 +102,19 @@ export const locationService = {
     },
 
     async deleteLocation(id: string): Promise<boolean> {
-        // Soft delete by setting is_active to false
+        // First, get the location name to deactivate its manager
+        const { data: locationData, error: fetchError } = await supabase
+            .from('locations')
+            .select('display_name')
+            .eq('id', id)
+            .single();
+
+        if (fetchError) {
+            console.error('Error fetching location:', fetchError);
+            return false;
+        }
+
+        // Soft delete the location by setting is_active to false
         const { error } = await supabase
             .from('locations')
             .update({ is_active: false })
@@ -101,6 +123,15 @@ export const locationService = {
         if (error) {
             console.error('Error deleting location:', error);
             return false;
+        }
+
+        // Deactivate the associated manager user
+        try {
+            const { userService } = await import('./userService');
+            await userService.deactivateManagerByLocationName(locationData.display_name);
+        } catch (err) {
+            console.error('Error deactivating manager for location:', err);
+            // Don't fail the location delete if manager deactivation fails
         }
 
         return true;

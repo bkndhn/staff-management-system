@@ -19,6 +19,7 @@ const StaffManagement = React.lazy(() => import('./components/StaffManagement'))
 const SalaryManagement = React.lazy(() => import('./components/SalaryManagement'));
 const PartTimeStaff = React.lazy(() => import('./components/PartTimeStaff'));
 const OldStaffRecords = React.lazy(() => import('./components/OldStaffRecords'));
+const Settings = React.lazy(() => import('./components/Settings'));
 
 // Loading fallback for lazy-loaded components
 const ComponentLoader = () => (
@@ -774,6 +775,13 @@ function App() {
             />
           </Suspense>
         );
+      case 'Settings':
+        if (user?.role !== 'admin') return null;
+        return (
+          <Suspense fallback={<ComponentLoader />}>
+            <Settings userRole={user?.role || 'manager'} />
+          </Suspense>
+        );
       default:
         return null;
     }
@@ -834,7 +842,7 @@ function App() {
         user={user}
         onLogout={handleLogout}
       />
-      <main className="max-w-7xl mx-auto">
+      <main className="w-full px-4 sm:px-6 lg:px-8">
         {renderContent()}
       </main>
 

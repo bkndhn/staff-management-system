@@ -8,7 +8,8 @@ import {
   Clock,
   Archive,
   LogOut,
-  AlertTriangle
+  AlertTriangle,
+  Settings as SettingsIcon
 } from 'lucide-react';
 
 interface NavigationProps {
@@ -43,6 +44,7 @@ const Navigation: React.FC<NavigationProps> = ({ activeTab, setActiveTab, user, 
         { id: 'Salary Management' as NavigationTab, label: 'Salary', icon: DollarSign },
         { id: 'Part-Time Staff' as NavigationTab, label: 'Part-Time', icon: Clock },
         { id: 'Old Staff Records' as NavigationTab, label: 'Archive', icon: Archive },
+        { id: 'Settings' as NavigationTab, label: 'Settings', icon: SettingsIcon },
       ];
     } else {
       // Manager role - limited access

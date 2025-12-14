@@ -1,6 +1,6 @@
 import React, { useState, useRef } from 'react';
 import { Staff, SalaryHike, SalaryCategory } from '../types';
-import { Users, Plus, Edit2, Trash2, Archive, Calendar, TrendingUp, MapPin, DollarSign, Check, X, Search, GripVertical, Filter } from 'lucide-react';
+import { Users, Plus, Edit2, Trash2, Archive, Calendar, TrendingUp, MapPin, DollarSign, Check, X, Search, GripVertical, Filter, Copy, AlertCircle } from 'lucide-react';
 import { calculateExperience } from '../utils/salaryCalculations';
 import SalaryHikeHistory from './SalaryHikeHistory';
 import SalaryHikeDueModal from './SalaryHikeDueModal';
@@ -54,6 +54,8 @@ const StaffManagement: React.FC<StaffManagementProps> = ({
   // Modal states for viewing full address and image
   const [viewAddressModal, setViewAddressModal] = useState<{ name: string; address: string } | null>(null);
   const [viewImageModal, setViewImageModal] = useState<{ name: string; photo: string } | null>(null);
+  const [credentialsModal, setCredentialsModal] = useState<{ credentials: { email: string; password: string }; locationName: string } | null>(null);
+  const [copiedField, setCopiedField] = useState<string | null>(null);
 
   // Fetch locations on mount
   React.useEffect(() => {
@@ -118,11 +120,29 @@ const StaffManagement: React.FC<StaffManagementProps> = ({
   const handleCreateLocation = async () => {
     if (newLocation.trim()) {
       const { locationService } = await import('../services/locationService');
-      const added = await locationService.addLocation(newLocation.trim());
-      if (added) {
-        setLocations(prev => [...prev, added]);
+      const result = await locationService.addLocation(newLocation.trim());
+      if (result.location) {
+        setLocations(prev => [...prev, result.location!]);
         setNewLocation('');
+
+        // Show generated credentials in styled modal
+        if (result.credentials) {
+          setCredentialsModal({
+            credentials: result.credentials,
+            locationName: result.location.name
+          });
+        }
       }
+    }
+  };
+
+  const copyToClipboard = async (text: string, field: string) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopiedField(field);
+      setTimeout(() => setCopiedField(null), 2000);
+    } catch (err) {
+      console.error('Failed to copy:', err);
     }
   };
 
@@ -1152,6 +1172,58 @@ const StaffManagement: React.FC<StaffManagementProps> = ({
               />
               <p className="text-center text-gray-700 font-medium mt-2 pb-1">{viewImageModal.name}</p>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Credentials Modal */}
+      {credentialsModal && (
+        <div className="modal-overlay">
+          <div className="modal-content max-w-md">
+            <div className="text-center mb-6">
+              <div className="w-16 h-16 mx-auto mb-4 bg-gradient-to-br from-emerald-500 to-green-600 rounded-2xl flex items-center justify-center">
+                <Check className="text-white" size={32} />
+              </div>
+              <h3 className="text-xl font-bold text-white">Manager Account Created</h3>
+              <p className="text-white/60 text-sm mt-1">for {credentialsModal.locationName}</p>
+            </div>
+
+            <div className="space-y-4 mb-6">
+              <div className="glass-card-static p-4 rounded-xl">
+                <label className="block text-xs font-medium text-white/50 mb-1">Email</label>
+                <div className="flex items-center justify-between">
+                  <span className="text-white font-mono">{credentialsModal.credentials.email}</span>
+                  <button
+                    onClick={() => copyToClipboard(credentialsModal.credentials.email, 'email')}
+                    className={`p-2 rounded-lg transition-colors ${copiedField === 'email' ? 'bg-emerald-500/20 text-emerald-400' : 'bg-white/10 text-white/60 hover:bg-white/20'}`}
+                  >
+                    {copiedField === 'email' ? <Check size={16} /> : <Copy size={16} />}
+                  </button>
+                </div>
+              </div>
+
+              <div className="glass-card-static p-4 rounded-xl">
+                <label className="block text-xs font-medium text-white/50 mb-1">Password</label>
+                <div className="flex items-center justify-between">
+                  <span className="text-white font-mono">{credentialsModal.credentials.password}</span>
+                  <button
+                    onClick={() => copyToClipboard(credentialsModal.credentials.password, 'password')}
+                    className={`p-2 rounded-lg transition-colors ${copiedField === 'password' ? 'bg-emerald-500/20 text-emerald-400' : 'bg-white/10 text-white/60 hover:bg-white/20'}`}
+                  >
+                    {copiedField === 'password' ? <Check size={16} /> : <Copy size={16} />}
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2 p-3 rounded-lg bg-amber-500/10 border border-amber-500/30 mb-6">
+              <AlertCircle className="text-amber-400 flex-shrink-0" size={18} />
+              <p className="text-amber-400 text-sm">Save these credentials securely. You can change them in Settings.</p>
+            </div>
+
+            <button onClick={() => setCredentialsModal(null)} className="w-full btn-premium">
+              Done
+            </button>
           </div>
         </div>
       )}

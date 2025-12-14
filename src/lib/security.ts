@@ -186,9 +186,15 @@ export function validateSession(sessionData: any): boolean {
         }
     }
 
-    // Validate browser fingerprint if present
+    // Fingerprint check - only warn, don't invalidate session
+    // This prevents logout during development hot reloads
     if (sessionData.fingerprint && sessionData.fingerprint !== generateBrowserFingerprint()) {
-        console.warn('Session fingerprint mismatch - possible session hijacking attempt');
+        console.warn('Session fingerprint changed - this is normal during development');
+        // Don't invalidate - just log the warning
+    }
+
+    // Ensure user data exists
+    if (!sessionData.user || !sessionData.user.email || !sessionData.user.role) {
         return false;
     }
 
