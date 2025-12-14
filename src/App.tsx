@@ -82,30 +82,37 @@ function App() {
     setIsDarkTheme(!isDarkTheme);
   };
 
-  // Load all data from Supabase on app start
+  // Restore session from localStorage on app start - runs only once
   useEffect(() => {
-    // Check for existing login session with security validation
-    const savedLogin = localStorage.getItem('staffManagementLogin');
-    if (savedLogin) {
+    const restoreSession = () => {
+      const savedLogin = localStorage.getItem('staffManagementLogin');
+      if (!savedLogin) return;
+
       try {
         const loginData = JSON.parse(savedLogin);
 
-        // Use secure session validation
-        const { validateSession } = require('./lib/security');
+        // Simple validation: just check user data exists
+        if (loginData?.user?.email && loginData?.user?.role) {
+          // Check if expired (if expiresAt exists)
+          if (loginData.expiresAt && Date.now() > loginData.expiresAt) {
+            console.log('Session expired');
+            localStorage.removeItem('staffManagementLogin');
+            return;
+          }
 
-        if (validateSession(loginData)) {
+          // Restore user
           setUser(loginData.user);
         } else {
-          // Session invalid or expired, remove it
-          console.warn('Session validation failed - logging out');
+          // Invalid session data
           localStorage.removeItem('staffManagementLogin');
         }
       } catch (error) {
-        // Invalid session data, remove it
         console.error('Session parse error:', error);
         localStorage.removeItem('staffManagementLogin');
       }
-    }
+    };
+
+    restoreSession();
   }, []);
 
   useEffect(() => {

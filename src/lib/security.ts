@@ -167,37 +167,31 @@ export function generateBrowserFingerprint(): string {
 }
 
 /**
- * Validate session
+ * Validate session - simplified to prevent unnecessary logouts
  */
 export function validateSession(sessionData: any): boolean {
-    if (!sessionData) return false;
-
-    const now = Date.now();
-
-    // Check expiration
-    if (sessionData.expiresAt && now > sessionData.expiresAt) {
+    // Basic check
+    if (!sessionData) {
+        console.log('Session validation: no session data');
         return false;
-    }
-
-    // Legacy support: check old timestamp format
-    if (sessionData.timestamp && sessionData.expiresIn) {
-        if (now - sessionData.timestamp > sessionData.expiresIn) {
-            return false;
-        }
-    }
-
-    // Fingerprint check - only warn, don't invalidate session
-    // This prevents logout during development hot reloads
-    if (sessionData.fingerprint && sessionData.fingerprint !== generateBrowserFingerprint()) {
-        console.warn('Session fingerprint changed - this is normal during development');
-        // Don't invalidate - just log the warning
     }
 
     // Ensure user data exists
     if (!sessionData.user || !sessionData.user.email || !sessionData.user.role) {
+        console.log('Session validation: missing user data');
         return false;
     }
 
+    // Check expiration only if expiresAt is present
+    if (sessionData.expiresAt) {
+        const now = Date.now();
+        if (now > sessionData.expiresAt) {
+            console.log('Session validation: session expired');
+            return false;
+        }
+    }
+
+    // Session is valid
     return true;
 }
 
