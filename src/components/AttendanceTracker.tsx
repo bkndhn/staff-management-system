@@ -276,65 +276,67 @@ const AttendanceTracker: React.FC<AttendanceTrackerProps> = ({
           />
         </div>
 
-        <div className="table-container overflow-x-auto">
-          <table className="w-full">
-            <thead>
-              <tr className="bg-gray-50">
-                <th className="px-2 md:px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">S.No</th>
-                <th className="px-2 md:px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider sticky left-0 z-10 bg-gray-50">Name</th>
-                {/* Summary Columns */}
-                <th className="px-1 md:px-2 py-3 text-center text-xs font-medium text-green-600 uppercase tracking-wider bg-green-50">P</th>
-                <th className="px-1 md:px-2 py-3 text-center text-xs font-medium text-yellow-600 uppercase tracking-wider bg-yellow-50">H</th>
-                <th className="px-1 md:px-2 py-3 text-center text-xs font-medium text-red-600 uppercase tracking-wider bg-red-50">A</th>
-                <th className="px-1 md:px-2 py-3 text-center text-xs font-medium text-red-700 uppercase tracking-wider bg-red-100">Sun</th>
-                <th className="px-1 md:px-2 py-3 text-center text-xs font-medium text-blue-600 uppercase tracking-wider bg-blue-50">Total</th>
-                {days.map(day => {
-                  const date = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-                  const isDateSunday = isSunday(date);
+        <div className="table-container">
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead>
+                <tr className="bg-gray-50">
+                  <th className="px-2 md:px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">S.No</th>
+                  <th className="px-2 md:px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider sticky left-0 z-10 bg-gray-50">Name</th>
+                  {/* Summary Columns */}
+                  <th className="px-1 md:px-2 py-3 text-center text-xs font-medium text-green-600 uppercase tracking-wider bg-green-50">P</th>
+                  <th className="px-1 md:px-2 py-3 text-center text-xs font-medium text-yellow-600 uppercase tracking-wider bg-yellow-50">H</th>
+                  <th className="px-1 md:px-2 py-3 text-center text-xs font-medium text-red-600 uppercase tracking-wider bg-red-50">A</th>
+                  <th className="px-1 md:px-2 py-3 text-center text-xs font-medium text-red-700 uppercase tracking-wider bg-red-100">Sun</th>
+                  <th className="px-1 md:px-2 py-3 text-center text-xs font-medium text-blue-600 uppercase tracking-wider bg-blue-50">Total</th>
+                  {days.map(day => {
+                    const date = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+                    const isDateSunday = isSunday(date);
+                    return (
+                      <th key={day} className={`px-1 md:px-2 py-3 text-center text-xs font-medium uppercase tracking-wider ${isDateSunday ? 'bg-red-50 text-red-600' : 'text-gray-500'
+                        }`}>
+                        {day}
+                        {isDateSunday && <div className="text-xs">Sun</div>}
+                      </th>
+                    );
+                  })}
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {monthlyFilteredStaff.map((member, index) => {
+                  const summary = getStaffSummary(member.id);
                   return (
-                    <th key={day} className={`px-1 md:px-2 py-3 text-center text-xs font-medium uppercase tracking-wider ${isDateSunday ? 'bg-red-50 text-red-600' : 'text-gray-500'
-                      }`}>
-                      {day}
-                      {isDateSunday && <div className="text-xs">Sun</div>}
-                    </th>
+                    <tr key={member.id} className="hover:bg-gray-50">
+                      <td className="px-2 md:px-4 py-4 whitespace-nowrap text-sm text-gray-900">{index + 1}</td>
+                      <td className="px-2 md:px-4 py-4 whitespace-nowrap text-sm font-medium text-gray-900 sticky left-0 z-10 bg-white">{member.name}</td>
+                      {/* Summary Values */}
+                      <td className="px-1 md:px-2 py-4 text-center text-sm font-bold text-green-600 bg-green-50">{summary.present}</td>
+                      <td className="px-1 md:px-2 py-4 text-center text-sm font-bold text-yellow-600 bg-yellow-50">{summary.halfDay}</td>
+                      <td className="px-1 md:px-2 py-4 text-center text-sm font-bold text-red-600 bg-red-50">{summary.absent}</td>
+                      <td className="px-1 md:px-2 py-4 text-center text-sm font-bold text-red-700 bg-red-100">{summary.sundayAbsent}</td>
+                      <td className="px-1 md:px-2 py-4 text-center text-sm font-bold text-blue-600 bg-blue-50">{summary.total}</td>
+                      {days.map(day => {
+                        const date = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+                        const attendanceRecord = getAttendanceForDate(member.id, date);
+                        const status = attendanceRecord?.status || 'Absent';
+                        const isDateSunday = isSunday(date);
+                        return (
+                          <td key={day} className={`px-1 md:px-2 py-4 text-center ${isDateSunday ? 'bg-red-50' : ''}`}>
+                            <span className={`inline-block w-5 h-5 md:w-6 md:h-6 rounded text-xs font-semibold leading-5 md:leading-6 ${status === 'Present' ? 'bg-green-500 text-white' :
+                              status === 'Half Day' ? 'bg-yellow-500 text-white' :
+                                status === 'Absent' ? (isDateSunday ? 'bg-red-700 text-white' : 'bg-red-500 text-white') : 'bg-gray-200 text-gray-500'
+                              }`}>
+                              {status === 'Present' ? 'P' : status === 'Half Day' ? 'H' : status === 'Absent' ? 'A' : '-'}
+                            </span>
+                          </td>
+                        );
+                      })}
+                    </tr>
                   );
                 })}
-              </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
-              {monthlyFilteredStaff.map((member, index) => {
-                const summary = getStaffSummary(member.id);
-                return (
-                  <tr key={member.id} className="hover:bg-gray-50">
-                    <td className="px-2 md:px-4 py-4 whitespace-nowrap text-sm text-gray-900">{index + 1}</td>
-                    <td className="px-2 md:px-4 py-4 whitespace-nowrap text-sm font-medium text-gray-900 sticky left-0 z-10 bg-white">{member.name}</td>
-                    {/* Summary Values */}
-                    <td className="px-1 md:px-2 py-4 text-center text-sm font-bold text-green-600 bg-green-50">{summary.present}</td>
-                    <td className="px-1 md:px-2 py-4 text-center text-sm font-bold text-yellow-600 bg-yellow-50">{summary.halfDay}</td>
-                    <td className="px-1 md:px-2 py-4 text-center text-sm font-bold text-red-600 bg-red-50">{summary.absent}</td>
-                    <td className="px-1 md:px-2 py-4 text-center text-sm font-bold text-red-700 bg-red-100">{summary.sundayAbsent}</td>
-                    <td className="px-1 md:px-2 py-4 text-center text-sm font-bold text-blue-600 bg-blue-50">{summary.total}</td>
-                    {days.map(day => {
-                      const date = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-                      const attendanceRecord = getAttendanceForDate(member.id, date);
-                      const status = attendanceRecord?.status || 'Absent';
-                      const isDateSunday = isSunday(date);
-                      return (
-                        <td key={day} className={`px-1 md:px-2 py-4 text-center ${isDateSunday ? 'bg-red-50' : ''}`}>
-                          <span className={`inline-block w-5 h-5 md:w-6 md:h-6 rounded text-xs font-semibold leading-5 md:leading-6 ${status === 'Present' ? 'bg-green-500 text-white' :
-                            status === 'Half Day' ? 'bg-yellow-500 text-white' :
-                              status === 'Absent' ? (isDateSunday ? 'bg-red-700 text-white' : 'bg-red-500 text-white') : 'bg-gray-200 text-gray-500'
-                            }`}>
-                            {status === 'Present' ? 'P' : status === 'Half Day' ? 'H' : status === 'Absent' ? 'A' : '-'}
-                          </span>
-                        </td>
-                      );
-                    })}
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
+              </tbody>
+            </table>
+          </div>
         </div>
 
         <div className="mt-4 flex flex-wrap items-center gap-4 text-sm text-gray-600">
@@ -406,7 +408,7 @@ const AttendanceTracker: React.FC<AttendanceTrackerProps> = ({
     <div className="p-4 md:p-6 space-y-6">
       {/* Header */}
       <div className="bg-gradient-to-r from-blue-600 to-purple-600 rounded-xl p-3 md:p-6 text-white">
-        <div className="flex items-center justify-between gap-2">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div className="flex items-center gap-2">
             <Calendar size={20} className="md:w-8 md:h-8" />
             <h1 className="text-lg md:text-3xl font-bold">Attendance Tracker</h1>
@@ -414,13 +416,13 @@ const AttendanceTracker: React.FC<AttendanceTrackerProps> = ({
           <div className="flex gap-2">
             <button
               onClick={() => setView('monthly')}
-              className="px-2 md:px-4 py-1.5 md:py-2 bg-white/20 text-white rounded-lg hover:bg-white/30 transition-colors text-xs md:text-sm"
+              className="flex-1 sm:flex-none px-2 md:px-4 py-1.5 md:py-2 bg-white/20 text-white rounded-lg hover:bg-white/30 transition-colors text-xs md:text-sm whitespace-nowrap"
             >
               Monthly View
             </button>
             <button
               onClick={handleExportPDF}
-              className="flex items-center gap-1 px-2 md:px-4 py-1.5 md:py-2 bg-white/20 text-white rounded-lg hover:bg-white/30 transition-colors text-xs md:text-sm"
+              className="flex items-center justify-center gap-1 px-2 md:px-4 py-1.5 md:py-2 bg-white/20 text-white rounded-lg hover:bg-white/30 transition-colors text-xs md:text-sm"
             >
               <Download size={14} />
             </button>
@@ -532,8 +534,8 @@ const AttendanceTracker: React.FC<AttendanceTrackerProps> = ({
       </div>
 
       {/* Attendance Table */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-100">
-        <div className="table-container overflow-x-auto" style={{ WebkitOverflowScrolling: 'touch' }}>
+      <div className="table-container">
+        <div className="overflow-x-auto">
           <table className="w-full">
             <thead className="bg-gray-50">
               <tr>
