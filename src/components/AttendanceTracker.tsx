@@ -540,7 +540,8 @@ const AttendanceTracker: React.FC<AttendanceTrackerProps> = ({
             <thead className="bg-gray-50">
               <tr>
                 <th className="px-3 md:px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">S.No</th>
-                <th className="px-3 md:px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
+                {/* Name Header - Sticky Left */}
+                <th className="px-3 md:px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider sticky left-0 z-30 bg-gray-50 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]">Name</th>
                 <th className="px-3 md:px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
                 <th className="px-3 md:px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
                 <th className="px-3 md:px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Location</th>
@@ -549,9 +550,9 @@ const AttendanceTracker: React.FC<AttendanceTrackerProps> = ({
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
               {combinedAttendanceData.map((data) => (
-                <tr key={data.id} className="hover:bg-gray-50">
+                <tr key={data.id} className="group hover:bg-gray-50 transition-colors">
                   <td className="px-3 md:px-6 py-4 whitespace-nowrap text-sm text-gray-900">{data.serialNo}</td>
-                  <td className="px-3 md:px-6 py-4 whitespace-nowrap">
+                  <td className="px-3 md:px-6 py-4 whitespace-nowrap sticky left-0 z-10 bg-white group-hover:bg-gray-50 transition-colors shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]">
                     <div>
                       <div className="text-sm font-medium text-gray-900">{data.name}</div>
                       <div className="text-sm text-gray-500">{data.type}</div>
