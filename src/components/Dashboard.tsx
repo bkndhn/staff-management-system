@@ -126,7 +126,7 @@ const Dashboard: React.FC<DashboardProps> = ({
   };
 
   return (
-    <div className="p-4 md:p-6 space-y-6">
+    <div className="p-2 md:p-6 space-y-6">
       {/* Header */}
       <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
         <div className="flex items-center gap-3">

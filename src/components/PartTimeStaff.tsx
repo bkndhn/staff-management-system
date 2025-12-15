@@ -1069,7 +1069,7 @@ const PartTimeStaff: React.FC<PartTimeStaffProps> = ({
         return ['All', ...availableLocations];
     };
     return (
-        <div className="p-4 md:p-6 space-y-4 md:space-y-6">
+        <div className="p-2 md:p-6 space-y-4 md:space-y-6">
             {/* Header */}
             <div className="bg-gradient-to-r from-purple-600 to-pink-600 rounded-xl p-6 text-white">
                 <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">

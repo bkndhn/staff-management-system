@@ -130,11 +130,42 @@ body.light-theme .text-white {
   color: #1a1a2e !important;
 }
 
+/* EXCEPTION: Preserve white text inside gradient headers */
+body.light-theme [class*="bg-gradient"] .text-white,
+body.light-theme [class*="bg-gradient"] h1,
+body.light-theme [class*="bg-gradient"] h2,
+body.light-theme [class*="bg-gradient"] p,
+body.light-theme [class*="bg-gradient"] span,
+body.light-theme [class*="bg-gradient"] button,
+body.light-theme [class*="from-blue"] .text-white,
+body.light-theme [class*="from-blue"] h1,
+body.light-theme [class*="from-blue"] h2,
+body.light-theme [class*="from-purple"] .text-white,
+body.light-theme [class*="from-purple"] h1,
+body.light-theme [class*="from-purple"] h2 {
+  color: #ffffff !important;
+}
+
+body.light-theme [class*="bg-gradient"] svg,
+body.light-theme [class*="from-blue"] svg,
+body.light-theme [class*="from-purple"] svg {
+  color: #ffffff !important;
+  fill: currentColor !important;
+}
+
 body.light-theme .text-white\/50,
 body.light-theme .text-white\/60,
 body.light-theme .text-white\/70,
 body.light-theme .text-white\/40 {
   color: rgba(26, 26, 46, 0.6) !important;
+}
+
+/* EXCEPTION: Preserve white/opacity text inside gradient headers */
+body.light-theme [class*="bg-gradient"] .text-white\/50,
+body.light-theme [class*="bg-gradient"] .text-white\/60,
+body.light-theme [class*="bg-gradient"] .text-white\/70,
+body.light-theme [class*="bg-gradient"] .text-white\/80 {
+  color: rgba(255, 255, 255, 0.7) !important;
 }
 
 body.light-theme p {
@@ -943,7 +974,7 @@ select.input-premium option {
 @media screen and (max-width: 768px) {
   .container {
     width: 100%;
-    padding: 12px;
+    padding: 4px;
   }
 
   /* Header adjustments */
@@ -1969,10 +2000,50 @@ label:has(input:checked) .font-medium {
 }
 
 /* Ensure th has solid background for sticky to work */
+/* ============================================
+   STANDARDIZED TABLE HEADERS (User Request)
+   - Solid background (like Attendance page)
+   - Increased text size
+   ============================================ */
+.table-premium thead th,
+.table-container table thead th,
 .table-container .table-premium th,
 .table-container table th {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  position: relative;
+  background: #f9fafb !important;
+  /* gray-50 */
+  color: #6b7280 !important;
+  /* gray-500 */
+  font-size: 14px !important;
+  /* Increased size (text-sm) */
+  font-weight: 500 !important;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  border-bottom: 1px solid #e5e7eb !important;
+  position: sticky !important;
+  top: 0;
+  z-index: 20;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+/* Light theme explicit */
+body.light-theme .table-premium thead th,
+body.light-theme .table-container table thead th,
+body.light-theme .table-container .table-premium th,
+body.light-theme .table-container table th {
+  background: #f9fafb !important;
+  color: #6b7280 !important;
+}
+
+/* Dark theme overrides */
+body:not(.light-theme) .table-premium thead th,
+body:not(.light-theme) .table-container table thead th,
+body:not(.light-theme) .table-container .table-premium th,
+body:not(.light-theme) .table-container table th {
+  background: #1f2937 !important;
+  /* gray-800 */
+  color: #9ca3af !important;
+  border-bottom: 1px solid #374151 !important;
 }
 
 /* Desktop: More table height */
@@ -1992,9 +2063,13 @@ label:has(input:checked) .font-medium {
     max-height: calc(100vh - 380px);
   }
 
+  /* Increase mobile header text size a bit too */
+  .table-premium thead th,
+  .table-container table thead th,
   .table-container .table-premium th,
   .table-container table th {
-    font-size: 0.65rem;
-    padding: 10px 6px;
+    font-size: 12px !important;
+    /* Increased from 0.65rem (~10px) to 12px */
+    padding: 10px 8px !important;
   }
 }

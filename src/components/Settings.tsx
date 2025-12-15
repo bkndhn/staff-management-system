@@ -334,7 +334,7 @@ const Settings: React.FC<SettingsProps> = ({ userRole }) => {
     }
 
     return (
-        <div className="p-4 md:p-6 space-y-4 md:space-y-6">
+        <div className="p-2 md:p-6 space-y-4 md:space-y-6">
             {/* Header */}
             <div className="flex items-center gap-3">
                 <div className="stat-icon stat-icon-primary">

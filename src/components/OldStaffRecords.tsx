@@ -47,11 +47,11 @@ const OldStaffRecords: React.FC<OldStaffRecordsProps> = ({ oldStaffRecords, onRe
   };
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="p-2 md:p-6 space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold text-gray-800 flex items-center gap-2">
-          <Archive className="text-gray-600" size={32} />
+        <h1 className="text-2xl md:text-3xl font-bold text-white flex items-center gap-2">
+          <Archive className="text-white/80" size={28} />
           Old Staff Records
         </h1>
         <div className="flex gap-3">

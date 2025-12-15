@@ -363,7 +363,7 @@ const AttendanceTracker: React.FC<AttendanceTrackerProps> = ({
 
   if (view === 'monthly') {
     return (
-      <div className="p-4 md:p-6 space-y-6">
+      <div className="p-2 md:p-6 space-y-6">
         <div className="flex items-center gap-4">
           <button
             onClick={() => setView('daily')}
@@ -405,7 +405,7 @@ const AttendanceTracker: React.FC<AttendanceTrackerProps> = ({
   });
 
   return (
-    <div className="p-4 md:p-6 space-y-6">
+    <div className="p-2 md:p-6 space-y-6">
       {/* Header */}
       <div className="bg-gradient-to-r from-blue-600 to-purple-600 rounded-xl p-3 md:p-6 text-white">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
