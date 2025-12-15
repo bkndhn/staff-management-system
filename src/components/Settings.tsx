@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Settings as SettingsIcon, Users, Plus, Edit2, Trash2, Eye, EyeOff, Shield, MapPin, Save, X, AlertCircle, Check, Copy, RefreshCw, Clock } from 'lucide-react';
+import { Settings as SettingsIcon, Users, Plus, Edit2, Trash2, Eye, EyeOff, Shield, MapPin, Save, X, AlertCircle, Check, Copy, Clock } from 'lucide-react';
 import { userService, AppUser, CreateUserInput, UpdateUserInput } from '../services/userService';
 import { locationService, Location } from '../services/locationService';
 
@@ -84,13 +84,8 @@ const UserCard: React.FC<{
     user: AppUser;
     onEdit: () => void;
     onDelete: () => void;
-    onRegenerate: () => void;
-    regenerating: boolean;
-    showNewPassword: { id: string; password: string } | null;
-    onCopyPassword: (password: string) => void;
-    onHidePassword: () => void;
     formatLastLogin: (lastLogin: string | null | undefined) => string;
-}> = ({ user, onEdit, onDelete, onRegenerate, regenerating, showNewPassword, onCopyPassword, onHidePassword, formatLastLogin }) => {
+}> = ({ user, onEdit, onDelete, formatLastLogin }) => {
     return (
         <div className="glass-card-static p-4 rounded-xl space-y-3">
             <div className="flex items-start justify-between">
@@ -116,39 +111,7 @@ const UserCard: React.FC<{
                 </span>
             </div>
 
-            {/* Password Section */}
-            <div className="pt-2 border-t border-white/10">
-                {showNewPassword?.id === user.id ? (
-                    <div className="flex items-center gap-2 flex-wrap">
-                        <code className="bg-emerald-500/20 text-emerald-400 px-2 py-1 rounded text-xs">
-                            {showNewPassword.password}
-                        </code>
-                        <button
-                            onClick={() => onCopyPassword(showNewPassword.password)}
-                            className="p-1.5 rounded bg-white/10 hover:bg-white/20 text-white/60"
-                            title="Copy password"
-                        >
-                            <Copy size={14} />
-                        </button>
-                        <button
-                            onClick={onHidePassword}
-                            className="p-1.5 rounded bg-white/10 hover:bg-white/20 text-white/60"
-                            title="Hide password"
-                        >
-                            <X size={14} />
-                        </button>
-                    </div>
-                ) : (
-                    <button
-                        onClick={onRegenerate}
-                        disabled={regenerating}
-                        className="flex items-center gap-1 text-sm text-indigo-400 hover:text-indigo-300 disabled:opacity-50"
-                    >
-                        <RefreshCw size={14} className={regenerating ? 'animate-spin' : ''} />
-                        Regenerate Password
-                    </button>
-                )}
-            </div>
+
 
             {/* Actions */}
             <div className="flex gap-2 pt-2">
@@ -184,8 +147,7 @@ const Settings: React.FC<SettingsProps> = ({ userRole }) => {
     const [error, setError] = useState('');
     const [success, setSuccess] = useState('');
     const [searchQuery, setSearchQuery] = useState('');
-    const [regeneratingPassword, setRegeneratingPassword] = useState<string | null>(null);
-    const [showNewPassword, setShowNewPassword] = useState<{ id: string; password: string } | null>(null);
+
 
     // Form state
     const [formData, setFormData] = useState({
@@ -246,33 +208,6 @@ const Settings: React.FC<SettingsProps> = ({ userRole }) => {
         });
         setEditingUser(user);
         setShowAddModal(true);
-    };
-
-    const handleRegeneratePassword = async (user: AppUser) => {
-        setRegeneratingPassword(user.id);
-        try {
-            const newPassword = await userService.regeneratePassword(user.id);
-            if (newPassword) {
-                setShowNewPassword({ id: user.id, password: newPassword });
-                setSuccess(`Password regenerated for ${user.full_name}`);
-            } else {
-                setError('Failed to regenerate password');
-            }
-        } catch (err) {
-            console.error('Error regenerating password:', err);
-            setError('Failed to regenerate password');
-        } finally {
-            setRegeneratingPassword(null);
-        }
-    };
-
-    const copyPassword = async (password: string) => {
-        try {
-            await navigator.clipboard.writeText(password);
-            setSuccess('Password copied to clipboard');
-        } catch (err) {
-            console.error('Failed to copy:', err);
-        }
     };
 
     const handleSubmit = async (e: React.FormEvent) => {
@@ -471,11 +406,6 @@ const Settings: React.FC<SettingsProps> = ({ userRole }) => {
                                 user={user}
                                 onEdit={() => handleEdit(user)}
                                 onDelete={() => setShowDeleteModal(user)}
-                                onRegenerate={() => handleRegeneratePassword(user)}
-                                regenerating={regeneratingPassword === user.id}
-                                showNewPassword={showNewPassword}
-                                onCopyPassword={copyPassword}
-                                onHidePassword={() => setShowNewPassword(null)}
                                 formatLastLogin={formatLastLogin}
                             />
                         ))
@@ -492,14 +422,13 @@ const Settings: React.FC<SettingsProps> = ({ userRole }) => {
                                 <th>Role</th>
                                 <th>Location</th>
                                 <th>Last Login</th>
-                                <th>Password</th>
                                 <th>Actions</th>
                             </tr>
                         </thead>
                         <tbody>
                             {filteredUsers.length === 0 ? (
                                 <tr>
-                                    <td colSpan={7} className="text-center py-8 text-white/50">
+                                    <td colSpan={6} className="text-center py-8 text-white/50">
                                         {searchQuery ? 'No users match your search.' : 'No users found. Add a user to get started.'}
                                     </td>
                                 </tr>
@@ -528,39 +457,6 @@ const Settings: React.FC<SettingsProps> = ({ userRole }) => {
                                                 <Clock size={12} />
                                                 {formatLastLogin(user.last_login)}
                                             </span>
-                                        </td>
-                                        <td>
-                                            {showNewPassword?.id === user.id ? (
-                                                <div className="flex items-center gap-2">
-                                                    <code className="bg-emerald-500/20 text-emerald-400 px-2 py-1 rounded text-xs">
-                                                        {showNewPassword.password}
-                                                    </code>
-                                                    <button
-                                                        onClick={() => copyPassword(showNewPassword.password)}
-                                                        className="p-1 rounded bg-white/10 hover:bg-white/20 text-white/60"
-                                                        title="Copy password"
-                                                    >
-                                                        <Copy size={12} />
-                                                    </button>
-                                                    <button
-                                                        onClick={() => setShowNewPassword(null)}
-                                                        className="p-1 rounded bg-white/10 hover:bg-white/20 text-white/60"
-                                                        title="Hide password"
-                                                    >
-                                                        <X size={12} />
-                                                    </button>
-                                                </div>
-                                            ) : (
-                                                <button
-                                                    onClick={() => handleRegeneratePassword(user)}
-                                                    disabled={regeneratingPassword === user.id}
-                                                    className="flex items-center gap-1 text-xs text-indigo-400 hover:text-indigo-300 disabled:opacity-50"
-                                                    title="Generate new password"
-                                                >
-                                                    <RefreshCw size={12} className={regeneratingPassword === user.id ? 'animate-spin' : ''} />
-                                                    Regenerate
-                                                </button>
-                                            )}
                                         </td>
                                         <td>
                                             <div className="flex items-center gap-2">
@@ -686,47 +582,52 @@ const Settings: React.FC<SettingsProps> = ({ userRole }) => {
                         </form>
                     </div>
                 </div>
-            )}
+            )
+            }
 
             {/* Delete Confirmation Modal */}
-            {showDeleteModal && (
-                <div className="modal-overlay">
-                    <div className="modal-content">
-                        <h3 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
-                            <Trash2 className="text-red-400" size={20} />
-                            Delete User
-                        </h3>
-                        <p className="text-white/60 mb-6">
-                            Are you sure you want to delete <strong className="text-white">{showDeleteModal.full_name}</strong>?
-                            This action cannot be undone.
-                        </p>
-                        <div className="flex gap-3">
-                            <button
-                                onClick={handleDelete}
-                                className="flex-1 btn-premium btn-premium-danger"
-                            >
-                                Delete
-                            </button>
-                            <button
-                                onClick={() => setShowDeleteModal(null)}
-                                className="flex-1 btn-ghost"
-                            >
-                                Cancel
-                            </button>
+            {
+                showDeleteModal && (
+                    <div className="modal-overlay">
+                        <div className="modal-content">
+                            <h3 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
+                                <Trash2 className="text-red-400" size={20} />
+                                Delete User
+                            </h3>
+                            <p className="text-white/60 mb-6">
+                                Are you sure you want to delete <strong className="text-white">{showDeleteModal.full_name}</strong>?
+                                This action cannot be undone.
+                            </p>
+                            <div className="flex gap-3">
+                                <button
+                                    onClick={handleDelete}
+                                    className="flex-1 btn-premium btn-premium-danger"
+                                >
+                                    Delete
+                                </button>
+                                <button
+                                    onClick={() => setShowDeleteModal(null)}
+                                    className="flex-1 btn-ghost"
+                                >
+                                    Cancel
+                                </button>
+                            </div>
                         </div>
                     </div>
-                </div>
-            )}
+                )
+            }
 
             {/* Credentials Modal */}
-            {showCredentialsModal && (
-                <CredentialsModal
-                    credentials={showCredentialsModal.credentials}
-                    locationName={showCredentialsModal.locationName}
-                    onClose={() => setShowCredentialsModal(null)}
-                />
-            )}
-        </div>
+            {
+                showCredentialsModal && (
+                    <CredentialsModal
+                        credentials={showCredentialsModal.credentials}
+                        locationName={showCredentialsModal.locationName}
+                        onClose={() => setShowCredentialsModal(null)}
+                    />
+                )
+            }
+        </div >
     );
 };
 

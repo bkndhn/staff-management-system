@@ -346,7 +346,6 @@ body::before {
 @media screen and (max-width: 768px) {
   body {
     padding-bottom: calc(var(--nav-height) + var(--safe-area-bottom) + 16px);
-    overflow-x: hidden;
   }
 
   main {
@@ -945,7 +944,6 @@ select.input-premium option {
   .container {
     width: 100%;
     padding: 12px;
-    overflow-x: hidden;
   }
 
   /* Header adjustments */
@@ -970,10 +968,11 @@ select.input-premium option {
     gap: 0.5rem;
   }
 
-  /* Table responsive */
+  /* Table responsive - enable horizontal scrolling */
   .table-container {
     overflow-x: auto;
     -webkit-overflow-scrolling: touch;
+    touch-action: pan-x pan-y;
     border-radius: 16px;
     border: 1px solid var(--glass-border);
   }
@@ -1958,6 +1957,7 @@ label:has(input:checked) .font-medium {
   overflow-x: auto;
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
+  touch-action: pan-x pan-y;
 }
 
 /* Force sticky header on table */

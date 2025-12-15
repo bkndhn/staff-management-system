@@ -28,36 +28,42 @@ const Dashboard: React.FC<DashboardProps> = ({
 
   const todayAttendance = attendance.filter(record => record.date === selectedDate);
 
-  // For managers, filter staff and attendance to their location only
+  // For managers, filter staff to their location only (for staff lists)
   const filteredStaff = userRole === 'admin'
     ? staff
     : staff.filter(member => member.location === userLocation);
 
+  // Keep ALL active staff for temp/guest calculations (need to access staff from other locations)
+  const allActiveStaff = staff.filter(member => member.isActive);
   const activeStaff = filteredStaff.filter(member => member.isActive);
   const fullTimeStaff = activeStaff.filter(member => member.type === 'full-time');
   const partTimeStaff = activeStaff.filter(member => member.type === 'part-time');
 
-  // Filter attendance for manager's location
-  const filteredTodayAttendance = userRole === 'admin'
-    ? todayAttendance
-    : todayAttendance.filter(record => {
-      // For full-time staff, check if the staffId belongs to their location
-      if (!record.isPartTime) {
-        const staffMember = staff.find(s => s.id === record.staffId);
-        return staffMember?.location === userLocation;
-      }
-      // For part-time staff, check the location field
-      return record.location === userLocation;
+  // Keep ALL attendance records - needed for temp/guest calculations
+  // The filtering will be done at the calculation level
+  const filteredTodayAttendance = todayAttendance;
+
+  // Full-time attendance - ALL records (needed for temp/guest detection)
+  const fullTimeAttendance = filteredTodayAttendance.filter(record => !record.isPartTime);
+
+  // For core stats (Present/Half Day/Absent), filter to only staff assigned to manager's location
+  const fullTimeAttendanceForStats = userRole === 'admin'
+    ? fullTimeAttendance
+    : fullTimeAttendance.filter(record => {
+      const staffMember = staff.find(s => s.id === record.staffId);
+      return staffMember?.location === userLocation;
     });
 
-  // Full-time attendance
-  const fullTimeAttendance = filteredTodayAttendance.filter(record => !record.isPartTime);
-  const presentToday = fullTimeAttendance.filter(record => record.status === 'Present').length;
-  const halfDayToday = fullTimeAttendance.filter(record => record.status === 'Half Day').length;
-  const absentToday = fullTimeAttendance.filter(record => record.status === 'Absent').length;
+  const presentToday = fullTimeAttendanceForStats.filter(record => record.status === 'Present').length;
+  const halfDayToday = fullTimeAttendanceForStats.filter(record => record.status === 'Half Day').length;
+  const absentToday = fullTimeAttendanceForStats.filter(record => record.status === 'Absent').length;
 
-  // Part-time attendance
-  const partTimeAttendance = filteredTodayAttendance.filter(record => record.isPartTime && record.status === 'Present');
+  // Part-time attendance - filter by location for manager's view
+  const partTimeAttendance = userRole === 'admin'
+    ? filteredTodayAttendance.filter(record => record.isPartTime && record.status === 'Present')
+    : filteredTodayAttendance.filter(record =>
+      record.isPartTime && record.status === 'Present' && record.location === userLocation
+    );
 
   // Calculate part-time breakdown for top summary card
   const partTimeBoth = partTimeAttendance.filter(record => record.shift === 'Both').length;
@@ -103,12 +109,13 @@ const Dashboard: React.FC<DashboardProps> = ({
   }, [activeStaff, todayAttendance, selectedDate, userRole, userLocation]);
 
   // Helper function to format staff names with shift info
+  // Use allActiveStaff to find staff from any location (not just manager's location)
   const formatStaffName = (staffId: string, isPartTime: boolean = false, staffName?: string, shift?: string) => {
     if (isPartTime) {
       return shift ? `${staffName} (${shift})` : staffName;
     }
 
-    const staffMember = activeStaff.find(s => s.id === staffId);
+    const staffMember = allActiveStaff.find(s => s.id === staffId);
     const attendanceRecord = filteredTodayAttendance.find(a => a.staffId === staffId && !a.isPartTime);
 
     if (attendanceRecord?.status === 'Half Day' && attendanceRecord?.shift) {
@@ -300,8 +307,9 @@ const Dashboard: React.FC<DashboardProps> = ({
             }).map(record => formatStaffName(record.staffId, false));
 
             // --- TEMP/GUEST: Staff assigned elsewhere but working HERE today ---
+            // Use allActiveStaff to find staff from other locations (not filtered by manager's location)
             const tempGuests = fullTimeAttendance.filter(record => {
-              const staffMember = activeStaff.find(s => s.id === record.staffId);
+              const staffMember = allActiveStaff.find(s => s.id === record.staffId);
               if (!staffMember) return false;
               // Staff assigned to different location
               if (staffMember.location === location.name) return false;
@@ -309,13 +317,14 @@ const Dashboard: React.FC<DashboardProps> = ({
               const attendanceLocation = record.location || staffMember.location;
               return attendanceLocation === location.name && record.status !== 'Absent';
             }).map(record => {
-              const staffMember = activeStaff.find(s => s.id === record.staffId);
+              const staffMember = allActiveStaff.find(s => s.id === record.staffId);
               return `${staffMember?.name} (from ${staffMember?.location})`;
             });
 
             // --- WORKING ELSEWHERE: Staff assigned HERE but working at different location ---
+            // Use allActiveStaff to find staff from other locations
             const workingElsewhere = fullTimeAttendance.filter(record => {
-              const staffMember = activeStaff.find(s => s.id === record.staffId);
+              const staffMember = allActiveStaff.find(s => s.id === record.staffId);
               if (!staffMember) return false;
               // Staff assigned to THIS location
               if (staffMember.location !== location.name) return false;
@@ -324,7 +333,7 @@ const Dashboard: React.FC<DashboardProps> = ({
               return attendanceLocation !== location.name && record.status !== 'Absent';
             }).map(record => {
               const attendanceLocation = record.location;
-              const staffMember = activeStaff.find(s => s.id === record.staffId);
+              const staffMember = allActiveStaff.find(s => s.id === record.staffId);
               return `${staffMember?.name} (at ${attendanceLocation})`;
             });
 

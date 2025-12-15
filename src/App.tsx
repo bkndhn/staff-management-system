@@ -707,8 +707,8 @@ function App() {
       case 'Dashboard':
         return (
           <Dashboard
-            staff={filteredStaffData}
-            attendance={filteredAttendanceData}
+            staff={staff}  // Pass ALL staff for temp/guest calculations
+            attendance={attendance}  // Pass ALL attendance for temp/guest calculations
             selectedDate={selectedDate}
             onDateChange={setSelectedDate}
             userRole={user?.role || 'manager'}
