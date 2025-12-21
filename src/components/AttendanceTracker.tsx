@@ -539,13 +539,13 @@ const AttendanceTracker: React.FC<AttendanceTrackerProps> = ({
           <table className="w-full">
             <thead className="bg-gray-50">
               <tr>
-                <th className="px-3 md:px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">S.No</th>
+                <th className="px-2 md:px-6 py-4 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">S.No</th>
                 {/* Name Header - Sticky Left */}
-                <th className="px-3 md:px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider sticky left-0 z-30 bg-gray-50 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]">Name</th>
-                <th className="px-3 md:px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
-                <th className="px-3 md:px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                <th className="px-3 md:px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Location</th>
-                <th className="px-3 md:px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Shift</th>
+                <th className="px-3 md:px-6 py-4 text-left text-xs font-bold text-gray-500 uppercase tracking-wider sticky left-0 z-30 bg-gray-50 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]">Name</th>
+                <th className="px-2 md:px-6 py-4 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Actions</th>
+                <th className="px-2 md:px-6 py-4 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Status</th>
+                <th className="px-2 md:px-6 py-4 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Loc</th>
+                <th className="px-2 md:px-6 py-4 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Shift</th>
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
@@ -561,10 +561,10 @@ const AttendanceTracker: React.FC<AttendanceTrackerProps> = ({
                   {/* Actions Column - 3rd position for easier mobile access */}
                   <td className="px-3 md:px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                     {!data.isPartTime && (
-                      <div className="attendance-actions flex space-x-1 md:space-x-2">
+                      <div className="attendance-actions flex gap-1 md:gap-2">
                         <button
                           onClick={() => onUpdateAttendance(data.id, selectedDate, 'Present')}
-                          className={`px-2 md:px-3 py-1 text-xs font-bold rounded shadow-sm ${data.status === 'Present'
+                          className={`w-7 h-7 md:w-auto md:px-3 md:py-1 text-xs font-bold rounded shadow-sm flex items-center justify-center ${data.status === 'Present'
                             ? 'bg-green-600 text-white ring-2 ring-green-600 ring-offset-1'
                             : 'bg-green-200 text-green-900 hover:bg-green-300 border border-green-300'
                             } transition-all duration-200`}
@@ -574,7 +574,7 @@ const AttendanceTracker: React.FC<AttendanceTrackerProps> = ({
                         </button>
                         <button
                           onClick={() => setShowHalfDayModal({ staffId: data.id, staffName: data.originalName || data.name })}
-                          className={`px-2 md:px-3 py-1 text-xs font-bold rounded shadow-sm ${data.status === 'Half Day'
+                          className={`w-7 h-7 md:w-auto md:px-3 md:py-1 text-xs font-bold rounded shadow-sm flex items-center justify-center ${data.status === 'Half Day'
                             ? 'bg-yellow-500 text-white ring-2 ring-yellow-500 ring-offset-1'
                             : 'bg-yellow-200 text-yellow-900 hover:bg-yellow-300 border border-yellow-300'
                             } transition-all duration-200`}
@@ -584,7 +584,7 @@ const AttendanceTracker: React.FC<AttendanceTrackerProps> = ({
                         </button>
                         <button
                           onClick={() => onUpdateAttendance(data.id, selectedDate, 'Absent')}
-                          className={`px-2 md:px-3 py-1 text-xs font-bold rounded shadow-sm ${data.status === 'Absent'
+                          className={`w-7 h-7 md:w-auto md:px-3 md:py-1 text-xs font-bold rounded shadow-sm flex items-center justify-center ${data.status === 'Absent'
                             ? 'bg-red-600 text-white ring-2 ring-red-600 ring-offset-1'
                             : 'bg-red-200 text-red-900 hover:bg-red-300 border border-red-300'
                             } transition-all duration-200`}
@@ -598,11 +598,11 @@ const AttendanceTracker: React.FC<AttendanceTrackerProps> = ({
                             staffName: data.originalName || data.name,
                             currentLocation: data.originalLocation || data.location
                           })}
-                          className="px-2 py-1 text-xs font-bold rounded bg-blue-100 text-blue-900 hover:bg-blue-200 border border-blue-200 transition-colors flex items-center justify-center shadow-sm"
-                          title="Change location for today"
+                          className="w-7 h-7 md:w-auto md:px-2 md:py-1 text-xs font-bold rounded bg-blue-100 text-blue-900 hover:bg-blue-200 border border-blue-200 transition-colors flex items-center justify-center shadow-sm"
+                          title="Change location"
                           disabled={!canEditDate}
                         >
-                          <MapPin size={12} />
+                          <MapPin size={14} />
                         </button>
                       </div>
                     )}

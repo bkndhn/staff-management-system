@@ -321,9 +321,9 @@ body.light-theme .mobile-nav-item-active svg {
   color: white !important;
 }
 
-/* Force dark icon for date picker in light theme */
+/* Fix for light theme specific date picker icon visibility */
 body.light-theme input[type="date"]::-webkit-calendar-picker-indicator {
-  filter: invert(1);
+  filter: none !important;
   opacity: 1;
   cursor: pointer;
 }
@@ -999,24 +999,30 @@ select.input-premium option {
     gap: 0.5rem;
   }
 
-  /* Table responsive - enable horizontal scrolling */
+  /* Table responsive - enable horizontal scrolling and sticky headers */
   .table-container {
     overflow-x: auto;
     -webkit-overflow-scrolling: touch;
     touch-action: pan-x pan-y;
-    border-radius: 16px;
+    border-radius: 12px;
     border: 1px solid var(--glass-border);
+    margin-bottom: 1rem;
+    position: relative;
   }
 
   .table-container table {
-    min-width: 600px;
+    min-width: 500px;
   }
 
+  /* Compact table for mobile */
   .table-premium td,
   .table-premium th {
-    padding: 10px 8px;
-    font-size: 0.9375rem;
-    /* 15px */
+    padding: 8px 6px;
+    font-size: 0.8125rem;
+  }
+
+  .table-premium th {
+    font-size: 0.75rem;
   }
 
   /* Stats grid responsive */

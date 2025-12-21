@@ -106,22 +106,25 @@ const Navigation: React.FC<NavigationProps> = ({ activeTab, setActiveTab, user, 
       </div>
 
       {/* Mobile Top Bar - Premium */}
-      <nav className="md:hidden sticky top-0 z-50 px-4 py-3 nav-premium">
+      <nav className="md:hidden sticky top-0 z-50 px-3 py-2.5 nav-premium">
         <div className="flex items-center justify-between">
-          <h1 className="text-lg font-bold text-gradient">
+          <h1 className="text-base font-bold text-gradient truncate max-w-[140px]">
             Staff Management
           </h1>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2">
             <div className="text-right">
+              <div className="text-[10px] font-bold text-white/40 uppercase tracking-tight">
+                {user.role === 'admin' ? 'Role' : 'Location'}
+              </div>
               <div className="text-xs font-semibold text-white">
                 {user.role === 'admin' ? 'Admin' : user.location}
               </div>
             </div>
             <button
               onClick={handleLogoutClick}
-              className="p-2.5 text-white/50 hover:text-red-400 rounded-xl transition-all duration-200 active:scale-90 bg-red-500/10"
+              className="p-2 text-white/50 hover:text-red-400 rounded-lg transition-all duration-200 active:scale-90 bg-red-500/10"
             >
-              <LogOut size={18} />
+              <LogOut size={16} />
             </button>
           </div>
         </div>

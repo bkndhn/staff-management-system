@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect } from 'react';
+﻿import React from 'react';
 import { Staff, Attendance } from '../types';
 import { Users, Clock, Calendar, MapPin, TrendingUp, Sun, Moon } from 'lucide-react';
 import { calculateLocationAttendance } from '../utils/salaryCalculations';
@@ -37,7 +37,6 @@ const Dashboard: React.FC<DashboardProps> = ({
   const allActiveStaff = staff.filter(member => member.isActive);
   const activeStaff = filteredStaff.filter(member => member.isActive);
   const fullTimeStaff = activeStaff.filter(member => member.type === 'full-time');
-  const partTimeStaff = activeStaff.filter(member => member.type === 'part-time');
 
   // Keep ALL attendance records - needed for temp/guest calculations
   // The filtering will be done at the calculation level
@@ -71,8 +70,6 @@ const Dashboard: React.FC<DashboardProps> = ({
   const partTimeEvening = partTimeAttendance.filter(record => record.shift === 'Evening').length;
   const partTimeTotal = partTimeBoth + partTimeMorning + partTimeEvening;
 
-  // Calculate total present value including half days (corrected logic)
-  const totalPresentValue = presentToday + halfDayToday;
 
   const [locations, setLocations] = React.useState<{ name: string; color: string; stats: any }[]>([]);
 
@@ -108,6 +105,16 @@ const Dashboard: React.FC<DashboardProps> = ({
     loadLocations();
   }, [activeStaff, todayAttendance, selectedDate, userRole, userLocation]);
 
+  // Helper function to sort staff IDs based on their order in the main staff array
+  const sortStaffIdsByOrder = (ids: string[]) => {
+    return [...ids].sort((a, b) => {
+      const indexA = staff.findIndex(s => s.id === a);
+      const indexB = staff.findIndex(s => s.id === b);
+      // If one is not found (e.g. temp staff not in current location but in 'staff'), respect their original position
+      return indexA - indexB;
+    });
+  };
+
   // Helper function to format staff names with shift info
   // Use allActiveStaff to find staff from any location (not just manager's location)
   const formatStaffName = (staffId: string, isPartTime: boolean = false, staffName?: string, shift?: string) => {
@@ -128,41 +135,45 @@ const Dashboard: React.FC<DashboardProps> = ({
   return (
     <div className="p-2 md:p-6 space-y-6">
       {/* Header */}
-      <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+      <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4">
         <div className="flex items-center gap-3">
-          <div className="stat-icon stat-icon-primary">
+          <div className="stat-icon stat-icon-primary shrink-0">
             <Calendar size={24} />
           </div>
           <div>
-            <h1 className="text-2xl md:text-3xl font-bold text-white">
+            <h1 className="text-xl md:text-3xl font-bold text-white leading-tight">
               Dashboard
             </h1>
-            <p className="text-white/50 text-sm">Overview & attendance tracking</p>
+            <p className="text-white/50 text-xs md:text-sm">Overview & tracking</p>
           </div>
         </div>
-        <div className="flex flex-col md:flex-row items-start md:items-end gap-4">
+
+        <div className="flex flex-wrap items-center gap-3 w-full lg:w-auto">
           {/* Theme Toggle */}
           <button
             onClick={toggleTheme}
-            className="flex items-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r from-indigo-500 to-purple-500 hover:from-indigo-600 hover:to-purple-600 text-white font-medium transition-all duration-300 shadow-lg hover:shadow-xl"
+            className="flex items-center gap-2 px-3 py-2 rounded-xl bg-gradient-to-r from-indigo-500 to-purple-500 hover:from-indigo-600 hover:to-purple-600 text-white font-medium transition-all duration-300 shadow-lg active:scale-95 shrink-0"
             title={isDarkTheme ? 'Switch to Light Theme' : 'Switch to Dark Theme'}
           >
-            {isDarkTheme ? <Sun size={18} /> : <Moon size={18} />}
-            <span className="text-sm">{isDarkTheme ? 'Light' : 'Dark'}</span>
+            {isDarkTheme ? <Sun size={16} /> : <Moon size={16} />}
+            <span className="text-xs md:text-sm">{isDarkTheme ? 'Light' : 'Dark'}</span>
           </button>
-          <div>
-            <label className="block text-sm text-white/50 mb-2">Select Date</label>
+
+          <div className="w-[160px] md:w-[180px] lg:w-48">
+            <label className="block text-[10px] uppercase tracking-wider font-bold text-white/40 mb-1 ml-1">Select Date</label>
             <input
               type="date"
               value={selectedDate}
               onChange={(e) => onDateChange(e.target.value)}
               max={new Date().toISOString().split('T')[0]}
-              className="input-premium"
+              className="input-premium py-2 px-3 text-sm"
             />
           </div>
-          <div className="text-left md:text-right px-3 py-2">
-            <span className="text-sm font-medium text-white/70">
-              {new Date(selectedDate + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'long' })}
+
+          <div className="hidden sm:block text-right px-2 lg:px-3">
+            <span className="text-xs font-bold text-white/30 uppercase tracking-tighter block">Day</span>
+            <span className="text-sm font-semibold text-white/70">
+              {new Date(selectedDate + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'short' })}
             </span>
           </div>
         </div>
@@ -284,58 +295,64 @@ const Dashboard: React.FC<DashboardProps> = ({
             const locationTotalFullTimeStaff = assignedStaff.length;
 
             // --- ASSIGNED STAFF PRESENT (at their own location) ---
-            const assignedPresent = fullTimeAttendance.filter(record => {
+            const assignedPresentIds = fullTimeAttendance.filter(record => {
               const staffMember = activeStaff.find(s => s.id === record.staffId);
               if (!staffMember || staffMember.location !== location.name) return false;
               const attendanceLocation = record.location || staffMember.location;
               return record.status === 'Present' && attendanceLocation === location.name;
-            }).map(record => formatStaffName(record.staffId, false));
+            }).map(record => record.staffId);
+
+            const assignedPresent = sortStaffIdsByOrder(assignedPresentIds).map(id => formatStaffName(id, false));
 
             // --- ASSIGNED STAFF HALF-DAY (at their own location) ---
-            const assignedHalfDay = fullTimeAttendance.filter(record => {
+            const assignedHalfDayIds = fullTimeAttendance.filter(record => {
               const staffMember = activeStaff.find(s => s.id === record.staffId);
               if (!staffMember || staffMember.location !== location.name) return false;
               const attendanceLocation = record.location || staffMember.location;
               return record.status === 'Half Day' && attendanceLocation === location.name;
-            }).map(record => formatStaffName(record.staffId, false));
+            }).map(record => record.staffId);
+
+            const assignedHalfDay = sortStaffIdsByOrder(assignedHalfDayIds).map(id => formatStaffName(id, false));
 
             // --- ASSIGNED STAFF ABSENT ---
-            const assignedAbsent = fullTimeAttendance.filter(record => {
+            const assignedAbsentIds = fullTimeAttendance.filter(record => {
               const staffMember = activeStaff.find(s => s.id === record.staffId);
               if (!staffMember || staffMember.location !== location.name) return false;
               return record.status === 'Absent';
-            }).map(record => formatStaffName(record.staffId, false));
+            }).map(record => record.staffId);
+
+            const assignedAbsent = sortStaffIdsByOrder(assignedAbsentIds).map(id => formatStaffName(id, false));
 
             // --- TEMP/GUEST: Staff assigned elsewhere but working HERE today ---
-            // Use allActiveStaff to find staff from other locations (not filtered by manager's location)
-            const tempGuests = fullTimeAttendance.filter(record => {
+            const tempGuestRecords = fullTimeAttendance.filter(record => {
               const staffMember = allActiveStaff.find(s => s.id === record.staffId);
               if (!staffMember) return false;
-              // Staff assigned to different location
               if (staffMember.location === location.name) return false;
-              // But working at THIS location today
               const attendanceLocation = record.location || staffMember.location;
               return attendanceLocation === location.name && record.status !== 'Absent';
-            }).map(record => {
-              const staffMember = allActiveStaff.find(s => s.id === record.staffId);
-              return `${staffMember?.name} (from ${staffMember?.location})`;
             });
 
+            const tempGuests = sortStaffIdsByOrder(tempGuestRecords.map(r => r.staffId))
+              .map(id => {
+                const staffMember = allActiveStaff.find(s => s.id === id);
+                return `${staffMember?.name} (from ${staffMember?.location})`;
+              });
+
             // --- WORKING ELSEWHERE: Staff assigned HERE but working at different location ---
-            // Use allActiveStaff to find staff from other locations
-            const workingElsewhere = fullTimeAttendance.filter(record => {
+            const workingElsewhereRecords = fullTimeAttendance.filter(record => {
               const staffMember = allActiveStaff.find(s => s.id === record.staffId);
               if (!staffMember) return false;
-              // Staff assigned to THIS location
               if (staffMember.location !== location.name) return false;
-              // But working at DIFFERENT location today
               const attendanceLocation = record.location || staffMember.location;
               return attendanceLocation !== location.name && record.status !== 'Absent';
-            }).map(record => {
-              const attendanceLocation = record.location;
-              const staffMember = allActiveStaff.find(s => s.id === record.staffId);
-              return `${staffMember?.name} (at ${attendanceLocation})`;
             });
+
+            const workingElsewhere = sortStaffIdsByOrder(workingElsewhereRecords.map(r => r.staffId))
+              .map(record => {
+                const attendanceRecord = workingElsewhereRecords.find(r => r.staffId === record);
+                const staffMember = allActiveStaff.find(s => s.id === record);
+                return `${staffMember?.name} (at ${attendanceRecord?.location})`;
+              });
 
             // Calculate actual present count (assigned staff at this location)
             const locationTotalPresent = assignedPresent.length + assignedHalfDay.length;
@@ -358,28 +375,28 @@ const Dashboard: React.FC<DashboardProps> = ({
 
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
                   <div className="glass-card-static p-4 border-l-4 border-emerald-500">
-                    <p className="text-base font-bold text-emerald-400 mb-2">Present: {assignedPresent.length}/{locationTotalFullTimeStaff}</p>
+                    <p className="text-base font-bold text-emerald-400 mb-2">✅ Present: {assignedPresent.length}/{locationTotalFullTimeStaff}</p>
                     <p className="text-sm text-white/60">
                       {assignedPresent.length > 0 ? assignedPresent.join(', ') : 'None'}
                     </p>
                   </div>
 
                   <div className="glass-card-static p-4 border-l-4 border-amber-500">
-                    <p className="text-base font-bold text-amber-400 mb-2">Half-day: {assignedHalfDay.length}</p>
+                    <p className="text-base font-bold text-amber-400 mb-2">🕒 Half-day: {assignedHalfDay.length}</p>
                     <p className="text-sm text-white/60">
                       {assignedHalfDay.length > 0 ? assignedHalfDay.join(', ') : 'None'}
                     </p>
                   </div>
 
                   <div className="glass-card-static p-4 border-l-4 border-red-500">
-                    <p className="text-base font-bold text-red-400 mb-2">Absent: {assignedAbsent.length}</p>
+                    <p className="text-base font-bold text-red-400 mb-2">❌ Absent: {assignedAbsent.length}</p>
                     <p className="text-sm text-white/60">
                       {assignedAbsent.length > 0 ? assignedAbsent.join(', ') : 'None'}
                     </p>
                   </div>
                 </div>
 
-                {/* Temp/Guest and Working Elsewhere Row */}
+                {/* Sub Row: Temp, Working Elsewhere, Part-Time */}
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div className="glass-card-static p-4 border-l-4 border-cyan-500">
                     <p className="text-base font-bold text-cyan-400 mb-2">🔄 Temp/Guest: {tempGuests.length}</p>
@@ -397,7 +414,7 @@ const Dashboard: React.FC<DashboardProps> = ({
 
                   <div className="glass-card-static p-4 border-l-4 border-purple-500">
                     <p className="text-base font-bold text-purple-400 mb-2">
-                      Part-Time: {locationPartTimeData.length}
+                      👥 Part-Time: {locationPartTimeData.length}
                     </p>
                     <p className="text-sm text-white/60">
                       {partTimeNames.length > 0
@@ -427,20 +444,31 @@ const Dashboard: React.FC<DashboardProps> = ({
               const overallPartTimeMorning = partTimeAttendance.filter(record => record.shift === 'Morning');
               const overallPartTimeEvening = partTimeAttendance.filter(record => record.shift === 'Evening');
 
-              const overallPartTimeNames = [
-                ...overallPartTimeBoth.map(record => `${record.staffName} (Both)`),
-                ...overallPartTimeMorning.map(record => `${record.staffName} (Morning)`),
-                ...overallPartTimeEvening.map(record => `${record.staffName} (Evening)`)
-              ];
+              const overallPartTimeTotal = [...overallPartTimeBoth, ...overallPartTimeMorning, ...overallPartTimeEvening];
 
-              const overallFullTimePresent = fullTimeAttendance.filter(record => record.status === 'Present')
-                .map(record => formatStaffName(record.staffId, false));
+              // Sort part-time staff by their order in the staff array
+              const overallPartTimeNames = [...overallPartTimeTotal]
+                .sort((a, b) => {
+                  const indexA = staff.findIndex(s => s.id === a.staffId || s.name === a.staffName);
+                  const indexB = staff.findIndex(s => s.id === b.staffId || s.name === b.staffName);
+                  return indexA - indexB;
+                })
+                .map(record => `${record.staffName} (${record.shift})`);
 
-              const overallFullTimeHalfDay = fullTimeAttendance.filter(record => record.status === 'Half Day')
-                .map(record => formatStaffName(record.staffId, false));
+              const overallFullTimePresentIds = fullTimeAttendance.filter(record => record.status === 'Present')
+                .map(record => record.staffId);
 
-              const overallFullTimeAbsent = fullTimeAttendance.filter(record => record.status === 'Absent')
-                .map(record => formatStaffName(record.staffId, false));
+              const overallFullTimePresent = sortStaffIdsByOrder(overallFullTimePresentIds).map(id => formatStaffName(id, false));
+
+              const overallFullTimeHalfDayIds = fullTimeAttendance.filter(record => record.status === 'Half Day')
+                .map(record => record.staffId);
+
+              const overallFullTimeHalfDay = sortStaffIdsByOrder(overallFullTimeHalfDayIds).map(id => formatStaffName(id, false));
+
+              const overallFullTimeAbsentIds = fullTimeAttendance.filter(record => record.status === 'Absent')
+                .map(record => record.staffId);
+
+              const overallFullTimeAbsent = sortStaffIdsByOrder(overallFullTimeAbsentIds).map(id => formatStaffName(id, false));
 
               return (
                 <div>
@@ -456,23 +484,23 @@ const Dashboard: React.FC<DashboardProps> = ({
                     )}
                   </h3>
 
-                  <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                     <div className="glass-card-static p-4 border-l-4 border-emerald-500">
-                      <p className="text-base font-bold text-emerald-400 mb-2">Present: {overallFullTimePresent.length}/{fullTimeStaff.length}</p>
+                      <p className="text-base font-bold text-emerald-400 mb-2">✅ Present: {overallFullTimePresent.length}/{fullTimeStaff.length}</p>
                       <p className="text-sm text-white/60">
                         {overallFullTimePresent.length > 0 ? overallFullTimePresent.join(', ') : 'None'}
                       </p>
                     </div>
 
                     <div className="glass-card-static p-4 border-l-4 border-amber-500">
-                      <p className="text-base font-bold text-amber-400 mb-2">Half-day: {overallFullTimeHalfDay.length}</p>
+                      <p className="text-base font-bold text-amber-400 mb-2">🕒 Half-day: {overallFullTimeHalfDay.length}</p>
                       <p className="text-sm text-white/60">
                         {overallFullTimeHalfDay.length > 0 ? overallFullTimeHalfDay.join(', ') : 'None'}
                       </p>
                     </div>
 
                     <div className="glass-card-static p-4 border-l-4 border-red-500">
-                      <p className="text-base font-bold text-red-400 mb-2">Absent: {overallFullTimeAbsent.length}</p>
+                      <p className="text-base font-bold text-red-400 mb-2">❌ Absent: {overallFullTimeAbsent.length}</p>
                       <p className="text-sm text-white/60">
                         {overallFullTimeAbsent.length > 0 ? overallFullTimeAbsent.join(', ') : 'None'}
                       </p>
@@ -480,7 +508,10 @@ const Dashboard: React.FC<DashboardProps> = ({
 
                     <div className="glass-card-static p-4 border-l-4 border-purple-500">
                       <p className="text-base font-bold text-purple-400 mb-2">
-                        Part-Time: {partTimeAttendance.length} (B: {overallPartTimeBoth.length}, M: {overallPartTimeMorning.length}, E: {overallPartTimeEvening.length})
+                        👥 Part-Time: {partTimeAttendance.length}
+                      </p>
+                      <p className="text-xs text-white/40 mb-1">
+                        (B: {overallPartTimeBoth.length}, M: {overallPartTimeMorning.length}, E: {overallPartTimeEvening.length})
                       </p>
                       <p className="text-sm text-white/60">
                         {overallPartTimeNames.length > 0
