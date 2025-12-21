@@ -767,6 +767,7 @@ const StaffManagement: React.FC<StaffManagementProps> = ({
                 staffName={showSalaryHistory.name}
                 currentSalary={showSalaryHistory.totalSalary}
                 staff={showSalaryHistory}
+                onRefresh={onRefreshStaff}
               />
               <div className="mt-6 flex justify-end">
                 <button

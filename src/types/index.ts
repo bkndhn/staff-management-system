@@ -134,6 +134,7 @@ export interface SalaryHike {
   newSalary: number;
   hikeDate: string;
   reason?: string;
+  breakdown?: Record<string, number>;
   createdAt: string;
 }
 

@@ -1,21 +1,24 @@
 import React from 'react';
 import { TrendingUp, Calendar, DollarSign } from 'lucide-react';
 import { SalaryHike, Staff } from '../types';
+import { settingsService } from '../services/settingsService';
 
 interface SalaryHikeHistoryProps {
   salaryHikes: SalaryHike[];
   staffName: string;
   currentSalary: number;
   staff?: Staff;
+  onRefresh?: () => Promise<void>;
 }
 
 const SalaryHikeHistory: React.FC<SalaryHikeHistoryProps> = ({
   salaryHikes,
   staffName,
   currentSalary,
-  staff
+  staff,
+  onRefresh
 }) => {
-  const latestHike = salaryHikes[0]; // Assuming sorted by date desc
+  const latestHike = salaryHikes[0];
 
   const getMonthsSinceHike = (hikeDate: string): number => {
     const hike = new Date(hikeDate);
@@ -28,11 +31,19 @@ const SalaryHikeHistory: React.FC<SalaryHikeHistoryProps> = ({
   const [previousSalaryData, setPreviousSalaryData] = React.useState<{ previousSalary: number | null, changeDate: string | null }>({ previousSalary: null, changeDate: null });
   const [showAddPastHike, setShowAddPastHike] = React.useState(false);
   const [editingHike, setEditingHike] = React.useState<SalaryHike | null>(null);
-  const [pastHikeForm, setPastHikeForm] = React.useState({
+
+  const [pastHikeForm, setPastHikeForm] = React.useState<{
+    date: string;
+    oldSalary: number;
+    newSalary: number;
+    reason: string;
+    breakdown: Record<string, number>;
+  }>({
     date: '',
     oldSalary: 0,
     newSalary: 0,
-    reason: ''
+    reason: '',
+    breakdown: {}
   });
 
   React.useEffect(() => {
@@ -51,7 +62,8 @@ const SalaryHikeHistory: React.FC<SalaryHikeHistoryProps> = ({
       date: hike.hikeDate,
       oldSalary: hike.oldSalary,
       newSalary: hike.newSalary,
-      reason: hike.reason || ''
+      reason: hike.reason || '',
+      breakdown: hike.breakdown || {}
     });
     setShowAddPastHike(true);
   };
@@ -61,11 +73,47 @@ const SalaryHikeHistory: React.FC<SalaryHikeHistoryProps> = ({
     try {
       const { salaryHikeService } = await import('../services/salaryHikeService');
       await salaryHikeService.delete(hikeId);
-      window.location.reload();
+      if (onRefresh) {
+        await onRefresh();
+      } else {
+        window.location.reload();
+      }
     } catch (error) {
       console.error('Error deleting hike:', error);
       alert('Failed to delete record');
     }
+  };
+
+  const handleBreakdownChange = (categoryId: string, value: number) => {
+    const newBreakdown = { ...pastHikeForm.breakdown, [categoryId]: value };
+    const newTotal = Object.values(newBreakdown).reduce((sum, val) => sum + val, 0);
+    setPastHikeForm({
+      ...pastHikeForm,
+      breakdown: newBreakdown,
+      newSalary: newTotal
+    });
+  };
+
+  const initializeForm = () => {
+    if (!staff) return;
+
+    const initialBreakdown: Record<string, number> = {
+      basic: staff.basicSalary,
+      incentive: staff.incentive,
+      hra: staff.hra,
+      meal_allowance: staff.mealAllowance || 0,
+      ...(staff.salarySupplements || {})
+    };
+
+    setEditingHike(null);
+    setPastHikeForm({
+      date: new Date().toISOString().split('T')[0],
+      oldSalary: staff.totalSalary,
+      newSalary: staff.totalSalary,
+      reason: '',
+      breakdown: initialBreakdown
+    });
+    setShowAddPastHike(true);
   };
 
   const handleAddPastHike = async (e: React.FormEvent) => {
@@ -75,36 +123,35 @@ const SalaryHikeHistory: React.FC<SalaryHikeHistoryProps> = ({
     try {
       const { salaryHikeService } = await import('../services/salaryHikeService');
 
+      const hikeData = {
+        staffId: staff.id,
+        oldSalary: pastHikeForm.oldSalary,
+        newSalary: pastHikeForm.newSalary,
+        hikeDate: pastHikeForm.date,
+        reason: pastHikeForm.reason,
+        breakdown: pastHikeForm.breakdown
+      };
+
       if (editingHike) {
-        await salaryHikeService.update(editingHike.id, {
-          oldSalary: pastHikeForm.oldSalary,
-          newSalary: pastHikeForm.newSalary,
-          hikeDate: pastHikeForm.date,
-          reason: pastHikeForm.reason
-        });
+        await salaryHikeService.update(editingHike.id, hikeData);
       } else {
-        await salaryHikeService.create({
-          staffId: staff.id,
-          oldSalary: pastHikeForm.oldSalary,
-          newSalary: pastHikeForm.newSalary,
-          hikeDate: pastHikeForm.date,
-          reason: pastHikeForm.reason
-        });
+        await salaryHikeService.create(hikeData);
       }
 
-      // Refresh data
       setShowAddPastHike(false);
       setEditingHike(null);
-      setPastHikeForm({ date: '', oldSalary: 0, newSalary: 0, reason: '' });
-      window.location.reload();
+      setPastHikeForm({ date: '', oldSalary: 0, newSalary: 0, reason: '', breakdown: {} });
+
+      if (onRefresh) {
+        await onRefresh();
+      } else {
+        window.location.reload();
+      }
     } catch (error) {
       console.error('Error saving hike:', error);
       alert('Failed to save record');
     }
   };
-
-  // Early return removed to allow "Add Past Hike" button to render
-  // if (salaryHikes.length === 0 && !previousSalaryData.previousSalary && !showAddPastHike) { ... }
 
   return (
     <div className="space-y-4">
@@ -179,11 +226,7 @@ const SalaryHikeHistory: React.FC<SalaryHikeHistoryProps> = ({
               Salary Hike History
             </h4>
             <button
-              onClick={() => {
-                setEditingHike(null);
-                setPastHikeForm({ date: '', oldSalary: 0, newSalary: 0, reason: '' });
-                setShowAddPastHike(true);
-              }}
+              onClick={initializeForm}
               className="text-xs text-blue-600 hover:text-blue-800 font-medium px-2 py-1 rounded hover:bg-blue-50"
             >
               + Add Past Hike
@@ -194,7 +237,7 @@ const SalaryHikeHistory: React.FC<SalaryHikeHistoryProps> = ({
         {showAddPastHike && (
           <div className="p-4 bg-blue-50 border-b border-blue-100">
             <h5 className="text-sm font-semibold text-gray-800 mb-3">{editingHike ? 'Edit Salary Hike Record' : 'Record Previous Salary Hike'}</h5>
-            <form onSubmit={handleAddPastHike} className="space-y-3">
+            <form onSubmit={handleAddPastHike} className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 <div>
                   <label className="block text-xs font-medium text-gray-700 mb-1">Date of Hike</label>
@@ -218,7 +261,7 @@ const SalaryHikeHistory: React.FC<SalaryHikeHistoryProps> = ({
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-medium text-gray-700 mb-1">Previous Salary (Before Hike)</label>
+                  <label className="block text-xs font-medium text-gray-700 mb-1">Previous TOTAL Salary (Before Hike)</label>
                   <input
                     type="number"
                     required
@@ -229,15 +272,48 @@ const SalaryHikeHistory: React.FC<SalaryHikeHistoryProps> = ({
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-medium text-gray-700 mb-1">New Salary (After Hike)</label>
-                  <input
-                    type="number"
-                    required
-                    value={pastHikeForm.newSalary}
-                    onChange={e => setPastHikeForm({ ...pastHikeForm, newSalary: Number(e.target.value) })}
-                    className="w-full px-2 py-1 text-sm border border-gray-300 rounded"
-                    placeholder="e.g. 12000"
-                  />
+                  <label className="block text-xs font-bold text-blue-800 mb-1 uppercase tracking-tighter">New TOTAL Salary (Calculated)</label>
+                  <div className="w-full px-3 py-2 text-lg border-2 border-blue-200 bg-blue-50 rounded-lg font-bold text-blue-900 shadow-inner flex items-center justify-between">
+                    <span className="text-blue-400">₹</span>
+                    <span>{pastHikeForm.newSalary.toLocaleString()}</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Component Editing */}
+              <div className="bg-white p-3 rounded-lg border border-blue-200 shadow-sm">
+                <h6 className="text-xs font-bold text-blue-900 mb-3 uppercase tracking-wider">New Component Breakdown (After Hike):</h6>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                  {settingsService.getSalaryCategories().map(category => (
+                    <div key={category.id} className="space-y-1">
+                      <label className="block text-[10px] uppercase font-bold text-gray-500">{category.name}</label>
+                      <div className="relative">
+                        <span className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400 text-xs">₹</span>
+                        <input
+                          type="number"
+                          value={pastHikeForm.breakdown[category.id] || 0}
+                          onChange={e => handleBreakdownChange(category.id, Number(e.target.value))}
+                          className="w-full pl-5 pr-2 py-1 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-blue-500"
+                        />
+                      </div>
+                    </div>
+                  ))}
+                  {/* Meal Allowance is a special field not in categories sometimes, but handled by settingsService now? 
+                      Wait, line 351 in original had it hardcoded. Let's ensure it's here. */}
+                  {!settingsService.getSalaryCategories().find(c => c.id === 'meal_allowance') && (
+                    <div className="space-y-1">
+                      <label className="block text-[10px] uppercase font-bold text-gray-500">Meal Allowance</label>
+                      <div className="relative">
+                        <span className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400 text-xs">₹</span>
+                        <input
+                          type="number"
+                          value={pastHikeForm.breakdown['meal_allowance'] || 0}
+                          onChange={e => handleBreakdownChange('meal_allowance', Number(e.target.value))}
+                          className="w-full pl-5 pr-2 py-1 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-blue-500"
+                        />
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -280,7 +356,7 @@ const SalaryHikeHistory: React.FC<SalaryHikeHistoryProps> = ({
         ) : (
           <div className="divide-y divide-gray-200">
             {salaryHikes.map((hike, index) => (
-              <div key={hike.id} className="p-4 hover:bg-gray-50 group">
+              <div key={hike.id} className="p-4 hover:bg-gray-50 group border-l-4 border-transparent hover:border-blue-500 transition-all">
                 <div className="flex items-center justify-between mb-2">
                   <div className="flex items-center gap-2">
                     <Calendar className="text-gray-400" size={14} />
@@ -292,18 +368,19 @@ const SalaryHikeHistory: React.FC<SalaryHikeHistoryProps> = ({
                       })}
                     </span>
                     {index === 0 && (
-                      <span className="px-2 py-1 bg-green-100 text-green-800 text-xs rounded-full">
-                        Latest
+                      <span className="px-2 py-1 bg-green-100 text-green-800 text-xs rounded-full font-bold">
+                        LATEST
                       </span>
                     )}
                   </div>
-                  <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-4">
                     <div className="text-right">
-                      <div className="text-sm text-gray-600">
+                      <div className="text-xs text-gray-500 mb-0.5">
                         ₹{hike.oldSalary.toLocaleString()} → ₹{hike.newSalary.toLocaleString()}
                       </div>
-                      <div className="text-sm font-semibold text-green-600">
-                        +₹{(hike.newSalary - hike.oldSalary).toLocaleString()}
+                      <div className="text-base font-bold text-green-600 flex items-center justify-end gap-1">
+                        <TrendingUp size={16} />
+                        ₹{(hike.newSalary - hike.oldSalary).toLocaleString()}
                       </div>
                     </div>
                     {/* Edit/Delete Actions */}
@@ -326,108 +403,82 @@ const SalaryHikeHistory: React.FC<SalaryHikeHistoryProps> = ({
                   </div>
                 </div>
 
-                {/* Component-wise breakdown */}
                 {staff && (
-                  <div className="mt-3 bg-gray-50 p-3 rounded-lg">
-                    <h5 className="text-sm font-semibold text-gray-700 mb-2">Component-wise Changes:</h5>
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-xs">
-                      <div className="bg-white p-2 rounded border">
-                        <span className="text-gray-600">Basic Salary:</span>
-                        <div className="font-medium">
-                          {index === salaryHikes.length - 1 ? (
-                            // First hike - compare with initial salary
-                            staff.initialSalary ? (
-                              <>
-                                ₹{Math.round(staff.initialSalary * 0.6).toLocaleString()} → ₹{staff.basicSalary.toLocaleString()}
-                                <span className="text-green-600 ml-1">
-                                  (+₹{(staff.basicSalary - Math.round(staff.initialSalary * 0.6)).toLocaleString()})
-                                </span>
-                              </>
-                            ) : (
-                              `₹${staff.basicSalary.toLocaleString()}`
-                            )
-                          ) : (
-                            // Subsequent hikes - assume proportional increase
-                            <>
-                              ₹{Math.round((hike.oldSalary / hike.newSalary) * staff.basicSalary).toLocaleString()} → ₹{staff.basicSalary.toLocaleString()}
-                              <span className="text-green-600 ml-1">
-                                (+₹{(staff.basicSalary - Math.round((hike.oldSalary / hike.newSalary) * staff.basicSalary)).toLocaleString()})
-                              </span>
-                            </>
-                          )}
-                        </div>
-                      </div>
-                      <div className="bg-white p-2 rounded border">
-                        <span className="text-gray-600">Incentive:</span>
-                        <div className="font-medium">
-                          {index === salaryHikes.length - 1 ? (
-                            staff.initialSalary ? (
-                              <>
-                                ₹{Math.round(staff.initialSalary * 0.33).toLocaleString()} → ₹{staff.incentive.toLocaleString()}
-                                {staff.incentive !== Math.round(staff.initialSalary * 0.33) ? (
-                                  <span className="text-green-600 ml-1">
-                                    (+₹{(staff.incentive - Math.round(staff.initialSalary * 0.33)).toLocaleString()})
+                  <div className="mt-3 bg-gray-50/50 p-4 rounded-xl border border-gray-100">
+                    <h5 className="text-[10px] font-black text-gray-400 mb-3 uppercase tracking-widest">Component Breakdown After Hike:</h5>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                      {/* Standard and Dynamic Categories combined */}
+                      {(() => {
+                        const categories = settingsService.getSalaryCategories();
+                        const displayedIds = new Set(categories.map(c => c.id));
+
+                        // Ensure meal_allowance is always considered
+                        if (!displayedIds.has('meal_allowance')) {
+                          categories.push({ id: 'meal_allowance', name: 'Meal Allowance', key: 'meal_allowance' });
+                        }
+
+                        return categories.map(category => {
+                          let newValue = 0;
+                          let oldValue = 0;
+                          let hasData = false;
+
+                          if (hike.breakdown && hike.breakdown[category.id] !== undefined) {
+                            // Use stored breakdown
+                            newValue = hike.breakdown[category.id];
+
+                            // Estimate oldValue based on ratio if we don't have previous breakdown
+                            // In a perfect world, we'd look at the hike before this one.
+                            // But for now, ratio-based estimate for old value is fine.
+                            const ratio = hike.oldSalary / hike.newSalary;
+                            oldValue = Math.round(newValue * ratio);
+                            hasData = true;
+                          } else {
+                            // Legacy record: fallback to ratio estimate for everything
+                            // Based on CURRENT staff values (not ideal for very old records but better than nothing)
+                            let currentVal = 0;
+                            if (category.id === 'basic') currentVal = staff!.basicSalary;
+                            else if (category.id === 'incentive') currentVal = staff!.incentive;
+                            else if (category.id === 'hra') currentVal = staff!.hra;
+                            else if (category.id === 'meal_allowance') currentVal = staff!.mealAllowance || 0;
+                            else currentVal = staff!.salarySupplements?.[category.id] || 0;
+
+                            const ratio = hike.newSalary / currentSalary;
+                            newValue = Math.round(currentVal * ratio);
+                            const oldRatio = hike.oldSalary / hike.newSalary;
+                            oldValue = Math.round(newValue * oldRatio);
+                            hasData = newValue > 0 || oldValue > 0;
+                          }
+
+                          if (!hasData) return null;
+
+                          const diff = newValue - oldValue;
+
+                          return (
+                            <div key={category.id} className="bg-white p-2 rounded border border-gray-200 flex flex-col gap-1 shadow-sm">
+                              <div className="flex justify-between items-center border-b border-gray-50 pb-1">
+                                <span className="text-gray-500 font-bold uppercase text-[9px] tracking-wider">{category.name}</span>
+                                {diff !== 0 && (
+                                  <span className={`font-bold px-1 rounded text-[10px] ${diff > 0 ? 'bg-green-50 text-green-600' : 'bg-red-50 text-red-500'}`}>
+                                    {diff > 0 ? '+' : ''}₹{diff.toLocaleString()}
                                   </span>
-                                ) : (
-                                  <span className="text-gray-500 ml-1">(No Change)</span>
                                 )}
-                              </>
-                            ) : (
-                              `₹${staff.incentive.toLocaleString()}`
-                            )
-                          ) : (
-                            <>
-                              ₹{Math.round((hike.oldSalary / hike.newSalary) * staff.incentive).toLocaleString()} → ₹{staff.incentive.toLocaleString()}
-                              {staff.incentive !== Math.round((hike.oldSalary / hike.newSalary) * staff.incentive) ? (
-                                <span className="text-green-600 ml-1">
-                                  (+₹{(staff.incentive - Math.round((hike.oldSalary / hike.newSalary) * staff.incentive)).toLocaleString()})
-                                </span>
-                              ) : (
-                                <span className="text-gray-500 ml-1">(No Change)</span>
-                              )}
-                            </>
-                          )}
-                        </div>
-                      </div>
-                      <div className="bg-white p-2 rounded border">
-                        <span className="text-gray-600">HRA:</span>
-                        <div className="font-medium">
-                          {index === salaryHikes.length - 1 ? (
-                            staff.initialSalary ? (
-                              <>
-                                ₹{Math.round(staff.initialSalary * 0.07).toLocaleString()} → ₹{staff.hra.toLocaleString()}
-                                {staff.hra !== Math.round(staff.initialSalary * 0.07) ? (
-                                  <span className="text-green-600 ml-1">
-                                    (+₹{(staff.hra - Math.round(staff.initialSalary * 0.07)).toLocaleString()})
-                                  </span>
-                                ) : (
-                                  <span className="text-gray-500 ml-1">(No Change)</span>
-                                )}
-                              </>
-                            ) : (
-                              `₹${staff.hra.toLocaleString()}`
-                            )
-                          ) : (
-                            <>
-                              ₹{Math.round((hike.oldSalary / hike.newSalary) * staff.hra).toLocaleString()} → ₹{staff.hra.toLocaleString()}
-                              {staff.hra !== Math.round((hike.oldSalary / hike.newSalary) * staff.hra) ? (
-                                <span className="text-green-600 ml-1">
-                                  (+₹{(staff.hra - Math.round((hike.oldSalary / hike.newSalary) * staff.hra)).toLocaleString()})
-                                </span>
-                              ) : (
-                                <span className="text-gray-500 ml-1">(No Change)</span>
-                              )}
-                            </>
-                          )}
-                        </div>
-                      </div>
+                              </div>
+                              <div className="flex items-center justify-between mt-0.5">
+                                <span className="text-gray-400 text-[10px]">₹{oldValue.toLocaleString()}</span>
+                                <span className="text-gray-400 text-[10px]">→</span>
+                                <span className="font-bold text-gray-900 text-sm">₹{newValue.toLocaleString()}</span>
+                              </div>
+                            </div>
+                          );
+                        });
+                      })()}
                     </div>
                   </div>
                 )}
 
                 {hike.reason && (
-                  <div className="text-sm text-gray-600 bg-gray-50 p-2 rounded">
-                    <strong>Reason:</strong> {hike.reason}
+                  <div className="mt-2 text-xs text-gray-500 bg-white/50 p-2 rounded border border-dashed border-gray-200">
+                    <strong className="text-gray-400 uppercase text-[10px]">Notes:</strong> {hike.reason}
                   </div>
                 )}
               </div>

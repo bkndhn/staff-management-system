@@ -5,6 +5,7 @@ import { calculateAttendanceMetrics, calculateSalary, calculatePartTimeSalary, r
 import { exportSalaryToExcel, exportSalaryPDF, generateSalarySlipPDF, exportBulkSalarySlipsPDF } from '../utils/exportUtils';
 import { settingsService } from '../services/settingsService';
 import { salaryOverrideService } from '../services/salaryOverrideService';
+import BulkSalarySender from './BulkSalarySender';
 
 interface SalaryManagementProps {
   staff: Staff[];
@@ -54,6 +55,7 @@ const SalaryManagement: React.FC<SalaryManagementProps> = ({
   const [saving, setSaving] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const salaryCategories = settingsService.getSalaryCategories();
+  const [showBulkSender, setShowBulkSender] = useState(false);
 
   const customCategories = salaryCategories.filter(c => !['basic', 'incentive', 'hra', 'meal_allowance'].includes(c.id));
 
@@ -567,6 +569,15 @@ const SalaryManagement: React.FC<SalaryManagementProps> = ({
               <span className="hidden sm:inline">All Slips</span>
               <span className="sm:hidden">Slips</span>
             </button>
+            <button
+              onClick={() => setShowBulkSender(true)}
+              className="btn-premium whitespace-nowrap flex items-center justify-center gap-2 px-3 md:px-4 py-2 text-sm bg-[#25D366] hover:bg-[#20bd5a] text-white border-none"
+              title="Rapidly send WhatsApp slips to all staff"
+            >
+              <MessageCircle size={16} />
+              <span className="hidden sm:inline">Bulk WhatsApp</span>
+              <span className="sm:hidden">WA</span>
+            </button>
           </div>
         </div>
       </div>
@@ -1028,7 +1039,18 @@ const SalaryManagement: React.FC<SalaryManagementProps> = ({
           </div>
         )
       }
-    </div >
+      {/* Bulk Sender Modal */}
+      {showBulkSender && (
+        <BulkSalarySender
+          salaryDetails={salaryDetails}
+          staff={staff}
+          year={selectedYear}
+          month={selectedMonth}
+          onClose={() => setShowBulkSender(false)}
+          onSend={handleWhatsAppShare}
+        />
+      )}
+    </div>
   );
 };
 

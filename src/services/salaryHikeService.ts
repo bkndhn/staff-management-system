@@ -8,6 +8,7 @@ export interface DatabaseSalaryHike {
   new_salary: number;
   hike_date: string;
   reason?: string;
+  breakdown?: Record<string, number>;
   created_at: string;
 }
 
@@ -88,6 +89,7 @@ export const salaryHikeService = {
     if (updates.newSalary !== undefined) dbUpdates.new_salary = updates.newSalary;
     if (updates.hikeDate !== undefined) dbUpdates.hike_date = updates.hikeDate;
     if (updates.reason !== undefined) dbUpdates.reason = updates.reason;
+    if (updates.breakdown !== undefined) dbUpdates.breakdown = updates.breakdown;
 
     const { data, error } = await supabase
       .from('salary_hikes')
@@ -124,6 +126,7 @@ export const salaryHikeService = {
       newSalary: dbHike.new_salary,
       hikeDate: dbHike.hike_date,
       reason: dbHike.reason,
+      breakdown: dbHike.breakdown,
       createdAt: dbHike.created_at
     };
   },
@@ -134,7 +137,8 @@ export const salaryHikeService = {
       old_salary: hike.oldSalary,
       new_salary: hike.newSalary,
       hike_date: hike.hikeDate,
-      reason: hike.reason
+      reason: hike.reason,
+      breakdown: hike.breakdown
     };
   }
 };

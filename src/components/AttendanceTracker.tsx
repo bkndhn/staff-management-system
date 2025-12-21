@@ -564,30 +564,30 @@ const AttendanceTracker: React.FC<AttendanceTrackerProps> = ({
                       <div className="attendance-actions flex space-x-1 md:space-x-2">
                         <button
                           onClick={() => onUpdateAttendance(data.id, selectedDate, 'Present')}
-                          className={`px-2 md:px-3 py-1 text-xs font-medium rounded ${data.status === 'Present'
-                            ? 'bg-green-600 text-white'
-                            : 'bg-green-100 text-green-800 hover:bg-green-200'
-                            } transition-colors`}
+                          className={`px-2 md:px-3 py-1 text-xs font-bold rounded shadow-sm ${data.status === 'Present'
+                            ? 'bg-green-600 text-white ring-2 ring-green-600 ring-offset-1'
+                            : 'bg-green-200 text-green-900 hover:bg-green-300 border border-green-300'
+                            } transition-all duration-200`}
                           disabled={!canEditDate}
                         >
                           P
                         </button>
                         <button
                           onClick={() => setShowHalfDayModal({ staffId: data.id, staffName: data.originalName || data.name })}
-                          className={`px-2 md:px-3 py-1 text-xs font-medium rounded ${data.status === 'Half Day'
-                            ? 'bg-yellow-600 text-white'
-                            : 'bg-yellow-100 text-yellow-800 hover:bg-yellow-200'
-                            } transition-colors`}
+                          className={`px-2 md:px-3 py-1 text-xs font-bold rounded shadow-sm ${data.status === 'Half Day'
+                            ? 'bg-yellow-500 text-white ring-2 ring-yellow-500 ring-offset-1'
+                            : 'bg-yellow-200 text-yellow-900 hover:bg-yellow-300 border border-yellow-300'
+                            } transition-all duration-200`}
                           disabled={!canEditDate}
                         >
                           H
                         </button>
                         <button
                           onClick={() => onUpdateAttendance(data.id, selectedDate, 'Absent')}
-                          className={`px-2 md:px-3 py-1 text-xs font-medium rounded ${data.status === 'Absent'
-                            ? 'bg-red-600 text-white'
-                            : 'bg-red-100 text-red-800 hover:bg-red-200'
-                            } transition-colors`}
+                          className={`px-2 md:px-3 py-1 text-xs font-bold rounded shadow-sm ${data.status === 'Absent'
+                            ? 'bg-red-600 text-white ring-2 ring-red-600 ring-offset-1'
+                            : 'bg-red-200 text-red-900 hover:bg-red-300 border border-red-300'
+                            } transition-all duration-200`}
                           disabled={!canEditDate}
                         >
                           A
@@ -598,7 +598,7 @@ const AttendanceTracker: React.FC<AttendanceTrackerProps> = ({
                             staffName: data.originalName || data.name,
                             currentLocation: data.originalLocation || data.location
                           })}
-                          className="px-2 py-1 text-xs font-medium rounded bg-blue-100 text-blue-800 hover:bg-blue-200 transition-colors flex items-center justify-center"
+                          className="px-2 py-1 text-xs font-bold rounded bg-blue-100 text-blue-900 hover:bg-blue-200 border border-blue-200 transition-colors flex items-center justify-center shadow-sm"
                           title="Change location for today"
                           disabled={!canEditDate}
                         >
