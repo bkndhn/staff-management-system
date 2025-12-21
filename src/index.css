@@ -2070,6 +2070,14 @@ body:not(.light-theme) .table-container table th {
   .table-container table th {
     font-size: 12px !important;
     /* Increased from 0.65rem (~10px) to 12px */
-    padding: 10px 8px !important;
   }
+}
+
+/* Utility classes to force text color (override global !important) */
+.text-force-dark {
+  color: #1f2937 !important;
+}
+
+.text-force-medium {
+  color: #374151 !important;
 }

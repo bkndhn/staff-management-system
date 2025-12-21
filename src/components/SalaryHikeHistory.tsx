@@ -109,8 +109,8 @@ const SalaryHikeHistory: React.FC<SalaryHikeHistoryProps> = ({
   return (
     <div className="space-y-4">
       {/* Current Salary Summary */}
-      <div className="bg-gradient-to-r from-green-50 to-emerald-50 p-4 rounded-lg border border-green-200">
-        <h4 className="font-semibold text-gray-800 mb-3 flex items-center gap-2">
+      <div className="bg-[#f0fdf4] p-4 rounded-lg border border-green-200">
+        <h4 className="font-semibold mb-3 flex items-center gap-2 text-force-dark">
           <DollarSign className="text-green-600" size={16} />
           Current Salary Status - {staffName}
         </h4>
@@ -119,8 +119,8 @@ const SalaryHikeHistory: React.FC<SalaryHikeHistoryProps> = ({
           {latestHike && (
             <>
               <div>
-                <span className="text-gray-600">Salary Hiked Month:</span>
-                <div className="font-semibold text-gray-800">
+                <span className="font-medium text-force-medium">Salary Hiked Month:</span>
+                <div className="font-semibold text-force-dark">
                   {new Date(latestHike.hikeDate).toLocaleDateString('en-US', {
                     year: 'numeric',
                     month: 'short'
@@ -128,28 +128,28 @@ const SalaryHikeHistory: React.FC<SalaryHikeHistoryProps> = ({
                 </div>
               </div>
               <div>
-                <span className="text-gray-600">Last Salary:</span>
-                <div className="font-semibold text-gray-800">₹{latestHike.oldSalary.toLocaleString()}</div>
+                <span className="font-medium text-force-medium">Last Salary:</span>
+                <div className="font-semibold text-force-dark">₹{latestHike.oldSalary.toLocaleString()}</div>
               </div>
             </>
           )}
           <div>
-            <span className="text-gray-600">Current Salary:</span>
+            <span className="font-medium text-force-medium">Current Salary:</span>
             <div className="font-semibold text-green-600">₹{currentSalary.toLocaleString()}</div>
           </div>
           {latestHike && (
             <div>
-              <span className="text-gray-600">Months Since Hike:</span>
+              <span className="font-medium text-force-medium">Months Since Hike:</span>
               <div className="font-semibold text-blue-600">{getMonthsSinceHike(latestHike.hikeDate)}</div>
             </div>
           )}
           <div>
-            <span className="text-gray-600 block mb-1" title="Salary before 01-10-2024">Previous (pre-Oct '24):</span>
-            <div className="font-semibold text-gray-700">
+            <span className="font-medium block mb-1 text-force-medium" title="Salary before 01-10-2024">Previous (pre-Oct '24):</span>
+            <div className="font-semibold text-force-medium">
               {previousSalaryData.previousSalary ? (
-                <span title={`Changed on ${new Date(previousSalaryData.changeDate!).toLocaleDateString()}`}>
+                <span title={`Changed on ${new Date(previousSalaryData.changeDate!).toLocaleDateString()}`} className="text-force-medium">
                   ₹{previousSalaryData.previousSalary.toLocaleString()}
-                  <span className="text-xs text-gray-500 ml-1">
+                  <span className="text-xs ml-1 text-gray-500">
                     ({new Date(previousSalaryData.changeDate!).toLocaleDateString('en-US', { month: 'short', year: '2-digit' })})
                   </span>
                 </span>
@@ -162,7 +162,7 @@ const SalaryHikeHistory: React.FC<SalaryHikeHistoryProps> = ({
 
         {latestHike && (
           <div className="mt-3 pt-3 border-t border-green-200">
-            <span className="text-gray-600">Difference:</span>
+            <span className="font-medium text-force-medium">Difference:</span>
             <span className="ml-2 font-semibold text-green-600">
               +₹{(currentSalary - latestHike.oldSalary).toLocaleString()}
             </span>
