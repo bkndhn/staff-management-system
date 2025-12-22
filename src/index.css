@@ -1553,13 +1553,11 @@ td[class*="bg-violet-50"] {
    LOGIN ICON OVERRIDES (CRITICAL)
    ============================================ */
 
-/* Force login input icons to be visible */
+/* Force login input icons to be visible - limited to glass cards */
 .glass-card-static svg,
 .glass-card-static .relative svg,
 .glass-card-static input+svg,
-.glass-card-static button svg,
-form svg,
-form .relative svg {
+.glass-card-static button svg {
   color: white !important;
   opacity: 1 !important;
   z-index: 10;

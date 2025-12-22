@@ -17,6 +17,73 @@ interface PartTimeStaffProps {
     userRole?: string;
 }
 
+const format12h = (time24: string | undefined) => {
+    if (!time24) return "";
+    const [h, m] = time24.split(":");
+    let hour = parseInt(h || "0");
+    const ampm = hour >= 12 ? "pm" : "am";
+    hour = hour % 12 || 12;
+    return `${hour}:${m} ${ampm}`;
+};
+
+const TimeInput: React.FC<{
+    value: string;
+    onChange: (value: string) => void;
+    className?: string;
+}> = ({ value, onChange, className }) => {
+    // Helper to convert 24h to 12h
+    const get12h = (time24: string) => {
+        if (!time24) return { h: "09", m: "00", p: "am" };
+        const [hStr, mStr] = time24.split(":");
+        let hInt = parseInt(hStr || "0");
+        const p = hInt >= 12 ? "pm" : "am";
+        const h = hInt % 12 || 12;
+        return { h: h.toString().padStart(2, "0"), m: mStr || "00", p };
+    };
+
+    const { h, m, p } = get12h(value);
+
+    const handleChange = (newH: string, newM: string, newP: string) => {
+        let hInt = parseInt(newH);
+        if (newP === "pm" && hInt < 12) hInt += 12;
+        if (newP === "am" && hInt === 12) hInt = 0;
+        const time24 = `${hInt.toString().padStart(2, "0")}:${newM}`;
+        onChange(time24);
+    };
+
+    return (
+        <div className={`flex items-center gap-1 ${className}`}>
+            <select
+                value={h}
+                onChange={(e) => handleChange(e.target.value, m, p)}
+                className="w-full bg-white border border-gray-300 rounded-lg px-1 py-2 text-sm focus:ring-2 focus:ring-purple-500 focus:border-transparent appearance-none text-center"
+            >
+                {Array.from({ length: 12 }, (_, i) => (i + 1).toString().padStart(2, "0")).map(hr => (
+                    <option key={hr} value={hr}>{hr}</option>
+                ))}
+            </select>
+            <span className="text-gray-400 font-bold">:</span>
+            <select
+                value={m}
+                onChange={(e) => handleChange(h, e.target.value, p)}
+                className="w-full bg-white border border-gray-300 rounded-lg px-1 py-2 text-sm focus:ring-2 focus:ring-purple-500 focus:border-transparent appearance-none text-center"
+            >
+                {["00", "05", "10", "15", "20", "25", "30", "35", "40", "45", "50", "55"].map(min => (
+                    <option key={min} value={min}>{min}</option>
+                ))}
+            </select>
+            <select
+                value={p}
+                onChange={(e) => handleChange(h, m, e.target.value)}
+                className="w-full bg-purple-50 border border-purple-200 text-purple-700 rounded-lg px-1 py-2 text-sm font-bold focus:ring-2 focus:ring-purple-500 focus:border-transparent appearance-none text-center"
+            >
+                <option value="am">am</option>
+                <option value="pm">pm</option>
+            </select>
+        </div>
+    );
+};
+
 const AdvanceInput: React.FC<{
     initialValue: number;
     staffName: string;
@@ -462,6 +529,26 @@ const PartTimeStaff: React.FC<PartTimeStaffProps> = ({
         return weeks;
     };
 
+    // Helper to get default shift and leaving time based on current time
+    const getDefaultShiftConfig = () => {
+        const now = new Date();
+        const hour = now.getHours();
+        const isSun = now.getDay() === 0;
+
+        // Sunday defaults to Both
+        if (isSun) {
+            return { shift: 'Both' as const, leavingTime: '21:30' };
+        }
+
+        // Morning (before 2 PM) defaults to Both
+        if (hour < 14) {
+            return { shift: 'Both' as const, arrivalTime: '09:00', leavingTime: '21:30' };
+        }
+
+        // Evening (after 2 PM) defaults to Evening
+        return { shift: 'Evening' as const, arrivalTime: '15:00', leavingTime: '21:30' };
+    };
+
     // Bulk add state
     const [bulkStaffList, setBulkStaffList] = useState<{
         name: string;
@@ -469,14 +556,16 @@ const PartTimeStaff: React.FC<PartTimeStaffProps> = ({
         salary: number;
         arrivalTime: string;
         leavingTime: string;
-    }[]>([{
-        name: '',
-        shift: (new Date().getDay() === 0 ? 'Both' : 'Morning') as 'Morning' | 'Evening' | 'Both',
-        salary: 0,
-        arrivalTime: '',
-        // Sunday = Both shift = 21:30, Other days = Morning shift = 15:00
-        leavingTime: new Date().getDay() === 0 ? '21:30' : '15:00'
-    }]);
+    }[]>(() => {
+        const config = getDefaultShiftConfig();
+        return [{
+            name: '',
+            shift: config.shift,
+            salary: 0,
+            arrivalTime: config.arrivalTime,
+            leavingTime: config.leavingTime
+        }];
+    });
     const [bulkLocation, setBulkLocation] = useState(userLocation || 'Big Shop');
     const [newStaffData, setNewStaffData] = useState<{
         name: string;
@@ -485,14 +574,16 @@ const PartTimeStaff: React.FC<PartTimeStaffProps> = ({
         salary: number;
         arrivalTime: string;
         leavingTime: string;
-    }>({
-        name: '',
-        location: (userLocation || 'Big Shop') as string,
-        shift: (new Date().getDay() === 0 ? 'Both' : 'Morning') as 'Morning' | 'Evening' | 'Both',
-        salary: 0,
-        arrivalTime: '',
-        // Sunday = Both shift = 21:30, Other days = Morning shift = 15:00
-        leavingTime: new Date().getDay() === 0 ? '21:30' : '15:00'
+    }>(() => {
+        const config = getDefaultShiftConfig();
+        return {
+            name: '',
+            location: (userLocation || 'Big Shop') as string,
+            shift: config.shift,
+            salary: 0,
+            arrivalTime: config.arrivalTime,
+            leavingTime: config.leavingTime
+        };
     });
 
     // Update bulkLocation when availableLocations loads
@@ -711,10 +802,13 @@ const PartTimeStaff: React.FC<PartTimeStaffProps> = ({
         const newList = [...bulkStaffList];
         (newList[index] as any)[field] = value;
 
-        // Auto-update leaving time when shift changes
+        // Auto-update times when shift changes
         if (field === 'shift') {
             const newShift = value as 'Morning' | 'Evening' | 'Both';
-            // Morning = 3:00 PM (15:00), Both/Evening = 9:30 PM (21:30)
+            // Morning = 9:00 AM to 3:00 PM
+            // Evening = 3:00 PM to 9:30 PM
+            // Both = 9:00 AM to 9:30 PM
+            newList[index].arrivalTime = newShift === 'Evening' ? '15:00' : '09:00';
             newList[index].leavingTime = newShift === 'Morning' ? '15:00' : '21:30';
         }
 
@@ -782,12 +876,13 @@ const PartTimeStaff: React.FC<PartTimeStaffProps> = ({
         });
 
         // Reset form
+        const config = getDefaultShiftConfig();
         setBulkStaffList([{
             name: '',
-            shift: (new Date().getDay() === 0 ? 'Both' : 'Morning') as 'Morning' | 'Evening' | 'Both',
+            shift: config.shift,
             salary: 0,
-            arrivalTime: '',
-            leavingTime: ''
+            arrivalTime: '09:00',
+            leavingTime: config.leavingTime
         }]);
         setShowAddForm(false);
     };
@@ -1123,7 +1218,7 @@ const PartTimeStaff: React.FC<PartTimeStaffProps> = ({
                 <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 md:p-6">
                     <div className="flex justify-between items-center mb-4">
                         <h2 className="text-lg md:text-xl font-bold text-gray-800">Add Part-Time Staff for Today</h2>
-                        <button onClick={() => setShowAddForm(false)} className="text-gray-500 hover:text-gray-700">
+                        <button onClick={() => setShowAddForm(false)} className="bg-gray-100 text-gray-500 hover:text-white hover:bg-red-600 p-1.5 rounded-full transition-all shadow-sm">
                             <X size={20} />
                         </button>
                     </div>
@@ -1146,15 +1241,15 @@ const PartTimeStaff: React.FC<PartTimeStaffProps> = ({
                         <div className="space-y-4">
                             {bulkStaffList.map((staffEntry, index) => (
                                 <div key={index} className="p-4 bg-gray-50 rounded-lg border border-gray-200 relative">
-                                    <div className="absolute top-2 right-2">
+                                    <div className="absolute -top-2 -right-2">
                                         {bulkStaffList.length > 1 && (
                                             <button
                                                 type="button"
                                                 onClick={() => handleRemoveBulkRow(index)}
-                                                className="text-red-500 hover:text-red-700 p-1"
+                                                className="bg-red-600 !text-white hover:bg-red-700 p-2 rounded-full transition-all shadow-lg border-2 border-white z-10 hover:scale-110 active:scale-95"
                                                 title="Remove row"
                                             >
-                                                <Trash2 size={18} />
+                                                <Trash2 size={18} strokeWidth={2.5} />
                                             </button>
                                         )}
                                     </div>
@@ -1207,23 +1302,21 @@ const PartTimeStaff: React.FC<PartTimeStaffProps> = ({
                                                 />
                                             </div>
                                         </div>
-                                        <div>
-                                            <label className="block text-xs font-medium text-gray-700 mb-1">Arrival</label>
-                                            <input
-                                                type="time"
-                                                value={staffEntry.arrivalTime}
-                                                onChange={(e) => handleBulkRowChange(index, 'arrivalTime', e.target.value)}
-                                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                                            />
-                                        </div>
-                                        <div>
-                                            <label className="block text-xs font-medium text-gray-700 mb-1">Leaving</label>
-                                            <input
-                                                type="time"
-                                                value={staffEntry.leavingTime}
-                                                onChange={(e) => handleBulkRowChange(index, 'leavingTime', e.target.value)}
-                                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                                            />
+                                        <div className="lg:col-span-2 grid grid-cols-2 gap-3">
+                                            <div>
+                                                <label className="block text-[10px] font-bold text-gray-400 mb-1 uppercase tracking-wider text-center">Arrival</label>
+                                                <TimeInput
+                                                    value={staffEntry.arrivalTime}
+                                                    onChange={(val) => handleBulkRowChange(index, 'arrivalTime', val)}
+                                                />
+                                            </div>
+                                            <div>
+                                                <label className="block text-[10px] font-bold text-gray-400 mb-1 uppercase tracking-wider text-center">Leaving</label>
+                                                <TimeInput
+                                                    value={staffEntry.leavingTime}
+                                                    onChange={(val) => handleBulkRowChange(index, 'leavingTime', val)}
+                                                />
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
@@ -1249,7 +1342,7 @@ const PartTimeStaff: React.FC<PartTimeStaffProps> = ({
                             </button>
                             <button
                                 type="submit"
-                                className="px-6 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors font-medium w-full sm:w-auto"
+                                className="px-6 py-2 bg-purple-600 !text-white rounded-lg hover:bg-purple-700 transition-colors font-bold w-full sm:w-auto shadow-md active:scale-95"
                             >
                                 Submit All Staff
                             </button>
@@ -1343,10 +1436,10 @@ const PartTimeStaff: React.FC<PartTimeStaffProps> = ({
                                                 {record.shift}
                                             </span>
                                             {(record.arrivalTime || record.leavingTime) && (
-                                                <div className="text-xs mt-1 text-gray-600">
-                                                    {record.arrivalTime && `In: ${new Date(`2000-01-01T${record.arrivalTime}`).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })}`}
+                                                <div className="text-[10px] mt-1 text-gray-500 font-medium">
+                                                    {record.arrivalTime && `In: ${format12h(record.arrivalTime)}`}
                                                     {record.arrivalTime && record.leavingTime && ' | '}
-                                                    {record.leavingTime && `Out: ${new Date(`2000-01-01T${record.leavingTime}`).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })}`}
+                                                    {record.leavingTime && `Out: ${format12h(record.leavingTime)}`}
                                                 </div>
                                             )}
                                         </td>
@@ -1394,20 +1487,22 @@ const PartTimeStaff: React.FC<PartTimeStaffProps> = ({
                                                             <option value="Half Day">Half Day</option>
                                                             <option value="Absent">Absent</option>
                                                         </select>
-                                                        <input
-                                                            type="time"
-                                                            value={editData.arrivalTime}
-                                                            onChange={(e) => setEditData({ ...editData, arrivalTime: e.target.value })}
-                                                            className="px-2 py-1 text-xs border rounded"
-                                                            placeholder="Arrival"
-                                                        />
-                                                        <input
-                                                            type="time"
-                                                            value={editData.leavingTime}
-                                                            onChange={(e) => setEditData({ ...editData, leavingTime: e.target.value })}
-                                                            className="px-2 py-1 text-xs border rounded"
-                                                            placeholder="Leaving"
-                                                        />
+                                                        <div className="flex flex-col gap-1">
+                                                            <div className="flex items-center gap-1">
+                                                                <span className="text-[10px] text-gray-400 w-8">Arr:</span>
+                                                                <TimeInput
+                                                                    value={editData.arrivalTime}
+                                                                    onChange={(val) => setEditData({ ...editData, arrivalTime: val })}
+                                                                />
+                                                            </div>
+                                                            <div className="flex items-center gap-1">
+                                                                <span className="text-[10px] text-gray-400 w-8">Leav:</span>
+                                                                <TimeInput
+                                                                    value={editData.leavingTime}
+                                                                    onChange={(val) => setEditData({ ...editData, leavingTime: val })}
+                                                                />
+                                                            </div>
+                                                        </div>
                                                     </div>
                                                     <div className="flex items-center gap-2">
                                                         <input
@@ -1419,15 +1514,15 @@ const PartTimeStaff: React.FC<PartTimeStaffProps> = ({
                                                         />
                                                         <button
                                                             onClick={() => handleSave(record)}
-                                                            className="text-green-600 hover:text-green-800 p-1"
+                                                            className="text-green-600 hover:text-green-800 p-1.5 rounded-lg hover:bg-green-50 transition-colors"
                                                         >
-                                                            <Save size={14} />
+                                                            <Save size={16} />
                                                         </button>
                                                         <button
                                                             onClick={handleCancelEdit}
-                                                            className="text-red-600 hover:text-red-800 p-1"
+                                                            className="text-red-600 hover:text-red-800 p-1.5 rounded-lg hover:bg-red-50 transition-colors"
                                                         >
-                                                            <X size={14} />
+                                                            <X size={16} />
                                                         </button>
                                                     </div>
                                                 </div>
@@ -1454,10 +1549,10 @@ const PartTimeStaff: React.FC<PartTimeStaffProps> = ({
                                                     </button>
                                                     <button
                                                         onClick={() => handleDelete(record.id)}
-                                                        className="text-red-600 hover:text-red-800 p-1 rounded hover:bg-red-50 transition-colors"
+                                                        className="bg-red-50 !text-red-700 hover:bg-red-600 hover:!text-white p-2 rounded-lg transition-all border border-red-100 hover:border-red-600 shadow-sm"
                                                         title="Delete record"
                                                     >
-                                                        <Trash2 size={14} />
+                                                        <Trash2 size={16} strokeWidth={2.5} />
                                                     </button>
                                                 </div>
                                             )}
