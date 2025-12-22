@@ -133,7 +133,7 @@ const Dashboard: React.FC<DashboardProps> = ({
   };
 
   return (
-    <div className="p-2 md:p-6 space-y-6">
+    <div className="p-1 md:p-6 space-y-6">
       {/* Header */}
       <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4">
         <div className="flex items-center gap-3">
@@ -183,7 +183,7 @@ const Dashboard: React.FC<DashboardProps> = ({
       {userRole === 'admin' && (
         <div className="space-y-4">
           {/* Main Stats Row */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
             {/* Active Staff */}
             <div className="stat-card card-animate">
               <div className="flex items-center justify-between">

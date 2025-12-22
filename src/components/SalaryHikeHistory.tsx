@@ -384,7 +384,7 @@ const SalaryHikeHistory: React.FC<SalaryHikeHistoryProps> = ({
                       </div>
                     </div>
                     {/* Edit/Delete Actions */}
-                    <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <div className="flex items-center gap-1 opacity-100 md:opacity-0 group-hover:opacity-100 transition-opacity">
                       <button
                         onClick={() => handleEditHike(hike)}
                         className="p-1.5 text-blue-600 hover:bg-blue-50 rounded"

@@ -517,7 +517,7 @@ const SalaryManagement: React.FC<SalaryManagementProps> = ({
   const totals = calculateTotals();
 
   return (
-    <div className="p-2 md:p-6 space-y-6">
+    <div className="p-1 md:p-6 space-y-6">
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div className="flex items-center gap-3">
