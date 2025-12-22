@@ -357,8 +357,8 @@ const SalaryHikeHistory: React.FC<SalaryHikeHistoryProps> = ({
           <div className="divide-y divide-gray-200">
             {salaryHikes.map((hike, index) => (
               <div key={hike.id} className="p-4 hover:bg-gray-50 group border-l-4 border-transparent hover:border-blue-500 transition-all">
-                <div className="flex items-center justify-between mb-2">
-                  <div className="flex items-center gap-2">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-2">
+                  <div className="flex items-center gap-2 flex-wrap">
                     <Calendar className="text-gray-400" size={14} />
                     <span className="text-sm font-medium text-gray-800">
                       {new Date(hike.hikeDate).toLocaleDateString('en-US', {
@@ -368,23 +368,23 @@ const SalaryHikeHistory: React.FC<SalaryHikeHistoryProps> = ({
                       })}
                     </span>
                     {index === 0 && (
-                      <span className="px-2 py-1 bg-green-100 text-green-800 text-xs rounded-full font-bold">
+                      <span className="px-2 py-1 bg-green-100 text-green-800 text-[10px] rounded-full font-bold">
                         LATEST
                       </span>
                     )}
                   </div>
-                  <div className="flex items-center gap-4">
+                  <div className="flex items-center justify-between sm:justify-end gap-3 sm:gap-4 w-full sm:w-auto">
                     <div className="text-right">
-                      <div className="text-xs text-gray-500 mb-0.5">
+                      <div className="text-[10px] text-gray-500 mb-0.5">
                         ₹{hike.oldSalary.toLocaleString()} → ₹{hike.newSalary.toLocaleString()}
                       </div>
-                      <div className="text-base font-bold text-green-600 flex items-center justify-end gap-1">
-                        <TrendingUp size={16} />
+                      <div className="text-sm sm:text-base font-bold text-green-600 flex items-center justify-end gap-1">
+                        <TrendingUp size={14} className="sm:w-4 sm:h-4" />
                         ₹{(hike.newSalary - hike.oldSalary).toLocaleString()}
                       </div>
                     </div>
                     {/* Edit/Delete Actions */}
-                    <div className="flex items-center gap-1 opacity-100 md:opacity-0 group-hover:opacity-100 transition-opacity">
+                    <div className="flex items-center gap-1 opacity-100 md:opacity-0 group-hover:opacity-100 transition-opacity bg-white/50 backdrop-blur-sm rounded-lg p-0.5 border border-gray-100">
                       <button
                         onClick={() => handleEditHike(hike)}
                         className="p-1.5 text-blue-600 hover:bg-blue-50 rounded"
