@@ -272,6 +272,32 @@ function App() {
 
     const attendanceValue = status === 'Present' ? 1 : status === 'Half Day' ? 0.5 : 0;
 
+    // Calculate default times if not provided
+    let finalArrivalTime = arrivalTime;
+    let finalLeavingTime = leavingTime;
+
+    if (!finalArrivalTime && (status === 'Present' || status === 'Half Day')) {
+      if (shift === 'Evening') {
+        finalArrivalTime = '14:00';
+      } else {
+        // Morning or Both (or undefined)
+        finalArrivalTime = '10:00';
+      }
+    }
+
+    if (!finalLeavingTime && (status === 'Present' || status === 'Half Day')) {
+      // Check location (either passed directly or from staff record if we had it, but loop doesn't give staff record here easily)
+      // However, we can use the location passed in arg.
+      // If location arg is missing, we might miss this default, but standard flow usually passes it or it exists on record.
+      // For full-time staff, location is usually constant.
+
+      // Ensure consistent check for Godown
+      const locToCheck = location || '';
+      if (locToCheck.toLowerCase().includes('godown')) {
+        finalLeavingTime = '21:00';
+      }
+    }
+
     const attendanceRecord = {
       staffId,
       date,
@@ -280,12 +306,12 @@ function App() {
       isSunday: isSunday(date),
       isPartTime: !!isPartTime,
       staffName,
-      shift,
+      shift: shift as any,
       location,
       salary,
       salaryOverride,
-      arrivalTime,
-      leavingTime
+      arrivalTime: finalArrivalTime,
+      leavingTime: finalLeavingTime
     };
 
     try {

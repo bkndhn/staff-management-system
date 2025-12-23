@@ -542,7 +542,7 @@ const SalaryManagement: React.FC<SalaryManagementProps> = ({
             />
           </div>
 
-          <div className="flex gap-2">
+          <div className="grid grid-cols-2 sm:flex gap-2">
             <button
               onClick={handleExportExcel}
               className="btn-premium btn-premium-success whitespace-nowrap flex items-center justify-center gap-2 px-3 md:px-4 py-2 text-sm"
@@ -628,7 +628,7 @@ const SalaryManagement: React.FC<SalaryManagementProps> = ({
       </div>
 
       {/* Summary Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 md:gap-6">
+      <div className="hidden md:grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 md:gap-6">
         <div className="stat-card">
           <div className="flex items-center justify-between">
             <div>

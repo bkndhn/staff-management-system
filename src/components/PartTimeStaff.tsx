@@ -537,16 +537,16 @@ const PartTimeStaff: React.FC<PartTimeStaffProps> = ({
 
         // Sunday defaults to Both
         if (isSun) {
-            return { shift: 'Both' as const, leavingTime: '21:30' };
+            return { shift: 'Both' as const, arrivalTime: '10:00', leavingTime: '21:30' };
         }
 
         // Morning (before 2 PM) defaults to Both
         if (hour < 14) {
-            return { shift: 'Both' as const, arrivalTime: '09:00', leavingTime: '21:30' };
+            return { shift: 'Both' as const, arrivalTime: '10:00', leavingTime: '21:30' };
         }
 
         // Evening (after 2 PM) defaults to Evening
-        return { shift: 'Evening' as const, arrivalTime: '15:00', leavingTime: '21:30' };
+        return { shift: 'Evening' as const, arrivalTime: '14:00', leavingTime: '21:30' };
     };
 
     // Bulk add state
@@ -558,12 +558,14 @@ const PartTimeStaff: React.FC<PartTimeStaffProps> = ({
         leavingTime: string;
     }[]>(() => {
         const config = getDefaultShiftConfig();
+        const initialLeavingTime = (userLocation === 'Godown') ? '21:00' : config.leavingTime;
+
         return [{
             name: '',
             shift: config.shift,
             salary: 0,
             arrivalTime: config.arrivalTime,
-            leavingTime: config.leavingTime
+            leavingTime: initialLeavingTime
         }];
     });
     const [bulkLocation, setBulkLocation] = useState(userLocation || 'Big Shop');
@@ -576,13 +578,16 @@ const PartTimeStaff: React.FC<PartTimeStaffProps> = ({
         leavingTime: string;
     }>(() => {
         const config = getDefaultShiftConfig();
+        const location = (userLocation || 'Big Shop') as string;
+        const initialLeavingTime = (location === 'Godown') ? '21:00' : config.leavingTime;
+
         return {
             name: '',
-            location: (userLocation || 'Big Shop') as string,
+            location: location,
             shift: config.shift,
             salary: 0,
             arrivalTime: config.arrivalTime,
-            leavingTime: config.leavingTime
+            leavingTime: initialLeavingTime
         };
     });
 
@@ -782,13 +787,19 @@ const PartTimeStaff: React.FC<PartTimeStaffProps> = ({
 
     // Bulk add helper functions
     const handleAddBulkRow = () => {
+        const isSun = new Date().getDay() === 0;
+        const defaultShift = isSun ? 'Both' : 'Morning';
+        // 10:00 for Morning/Both
+        const defaultArrival = '10:00';
+        // 21:00 for Godown, 21:30 for others
+        const defaultLeaving = bulkLocation === 'Godown' ? '21:00' : '21:30';
+
         setBulkStaffList([...bulkStaffList, {
             name: '',
-            shift: (new Date().getDay() === 0 ? 'Both' : 'Morning') as 'Morning' | 'Evening' | 'Both',
+            shift: defaultShift as 'Morning' | 'Evening' | 'Both',
             salary: 0,
-            arrivalTime: '',
-            // Sunday = Both shift = 21:30, Other days = Morning shift = 15:00
-            leavingTime: new Date().getDay() === 0 ? '21:30' : '15:00'
+            arrivalTime: defaultArrival,
+            leavingTime: defaultLeaving
         }]);
     };
 
@@ -798,6 +809,23 @@ const PartTimeStaff: React.FC<PartTimeStaffProps> = ({
         }
     };
 
+    const handleBulkLocationChange = (location: string) => {
+        setBulkLocation(location);
+
+        const updatedList = bulkStaffList.map(item => {
+            // If shift is NOT Morning, apply location rule.
+            // If Morning, keep 15:00.
+            if (item.shift !== 'Morning') {
+                return {
+                    ...item,
+                    leavingTime: location === 'Godown' ? '21:00' : '21:30'
+                };
+            }
+            return item;
+        });
+        setBulkStaffList(updatedList);
+    };
+
     const handleBulkRowChange = (index: number, field: string, value: any) => {
         const newList = [...bulkStaffList];
         (newList[index] as any)[field] = value;
@@ -805,11 +833,19 @@ const PartTimeStaff: React.FC<PartTimeStaffProps> = ({
         // Auto-update times when shift changes
         if (field === 'shift') {
             const newShift = value as 'Morning' | 'Evening' | 'Both';
-            // Morning = 9:00 AM to 3:00 PM
-            // Evening = 3:00 PM to 9:30 PM
-            // Both = 9:00 AM to 9:30 PM
-            newList[index].arrivalTime = newShift === 'Evening' ? '15:00' : '09:00';
-            newList[index].leavingTime = newShift === 'Morning' ? '15:00' : '21:30';
+            // Morning = 10:00 AM to 3:00 PM
+            // Evening = 2:00 PM to 9:30 PM (Godown 9:00 PM)
+            // Both = 10:00 AM to 9:30 PM (Godown 9:00 PM)
+
+            newList[index].arrivalTime = newShift === 'Evening' ? '14:00' : '10:00';
+
+            // Determine leaving time based on shift and location
+            if (newShift === 'Morning') {
+                newList[index].leavingTime = '15:00';
+            } else {
+                // Evening or Both
+                newList[index].leavingTime = bulkLocation === 'Godown' ? '21:00' : '21:30';
+            }
         }
 
         setBulkStaffList(newList);
@@ -865,7 +901,7 @@ const PartTimeStaff: React.FC<PartTimeStaffProps> = ({
             const arrivalTime = staffData.arrivalTime || new Date().toTimeString().slice(0, 5);
             let leavingTime = staffData.leavingTime;
             if (!leavingTime) {
-                leavingTime = staffData.shift === 'Morning' ? '15:00' : '21:30';
+                leavingTime = staffData.shift === 'Morning' ? '15:00' : (bulkLocation === 'Godown' ? '21:00' : '21:30');
             }
 
             onUpdateAttendance(
@@ -877,12 +913,14 @@ const PartTimeStaff: React.FC<PartTimeStaffProps> = ({
 
         // Reset form
         const config = getDefaultShiftConfig();
+        const initialLeavingTime = (bulkLocation === 'Godown') ? '21:00' : config.leavingTime;
+
         setBulkStaffList([{
             name: '',
             shift: config.shift,
             salary: 0,
-            arrivalTime: '09:00',
-            leavingTime: config.leavingTime
+            arrivalTime: config.arrivalTime,
+            leavingTime: initialLeavingTime
         }]);
         setShowAddForm(false);
     };
@@ -1229,7 +1267,7 @@ const PartTimeStaff: React.FC<PartTimeStaffProps> = ({
                             <label className="block text-sm font-medium text-gray-700 mb-1">Location (Applies to all)</label>
                             <select
                                 value={bulkLocation}
-                                onChange={(e) => setBulkLocation(e.target.value)}
+                                onChange={(e) => handleBulkLocationChange(e.target.value)}
                                 className="w-full md:w-1/3 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                                 disabled={!!userLocation}
                             >
